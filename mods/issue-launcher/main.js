@@ -1,6 +1,6 @@
-import { View, div } from "gpui-kit";
+import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, focused, agents, terminals, exec, readTextFile, run, notify, theme, props, closeOverlay, window as appWindow } from "herdr";
+import { spaces, panes, focused, agents, terminals, exec, readTextFile, run, notify, theme, props, closeOverlay, layout, shared, setShared, window as appWindow } from "herdr";
 import * as L from "./logic.js";
 
 const REFRESH_MS = 5 * 60 * 1000;
@@ -15,6 +15,15 @@ const stop = (_e, cx) => cx.stop_propagation();
 const firstLine = L.errorLine;
 const pad = (n) => String(n).padStart(2, "0");
 const clock = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+function find(node, id) {
+  if (node?.id === id) return node;
+  for (const child of node?.children ?? []) {
+    const found = find(child, id);
+    if (found) return found;
+  }
+  return null;
+}
 
 // Where the person is working, as the shipped changes mod finds it.
 function location() {
@@ -56,6 +65,13 @@ const emptyData = L.emptyData;
 
 export default class IssueLauncher extends View {
   init(_props, cx) {
+    // The tab-bar button only draws a toggle; it never fetches.
+    if (props()?.role === "button") {
+      const panels = shared("workspace.panels");
+      const next = L.withIssuesPanel(panels);
+      if (next !== panels) setShared("workspace.panels", next);
+      return;
+    }
     this.project = null; // { key, root, on, provider }
     this.notGit = false;
     this.data = emptyData();
@@ -176,7 +192,23 @@ export default class IssueLauncher extends View {
     cx.notify();
   }
 
+  // The Issues button, styled like the shipped tab bar's Files and Changes buttons.
+  renderButton() {
+    const t = theme();
+    const root = layout();
+    const hidden = find(root, "panel")?.hidden ?? true;
+    const active = find(root, "panel-body")?.active ?? null;
+    const on = L.panelOn(hidden, active);
+    return h_flex().size_full().pr(10).items_center().bg(t.chrome).border_b(1).border_color(t.border)
+      .child(h_flex().id("panel-issues").h(26).px(8).gap(5).flex_none().items_center().rounded(6).cursor_pointer()
+        .text_size(12).bg(on ? t.selected : t.chrome).text_color(on ? t.foreground : t.muted)
+        .hover((s) => s.bg(t.hover))
+        .on_click(() => { for (const [name, args] of L.panelToggle(hidden, active)) run(name, args); })
+        .child(svg("mods/issue-launcher/issues.svg").size(14)).child("Issues"));
+  }
+
   render() {
+    if (props()?.role === "button") return this.renderButton();
     const t = theme();
     const project = this.project;
     const data = this.data;
