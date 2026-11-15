@@ -4,7 +4,7 @@ A right-side panel, with an Issues button next to Files and Changes, that lists 
 
 ![Issue launcher](preview.png)
 
-This file is the brief: enough to build Issue launcher from an empty folder. The files next to it (`mods/issue-launcher/`) are one build of it. If they don't work on your Herdr, or you want it different, build it again from here. The panel text is Traditional Chinese, as in the build; translate the strings if you want another language.
+This file is the brief: enough to build Issue launcher from an empty folder. The files next to it (`mods/issue-launcher/`) are one build of it. If they don't work on your Herdr, or you want it different, build it again from here. The panel speaks English or Traditional Chinese (see Languages); the examples below quote the Chinese text.
 
 ## What you see
 
@@ -43,7 +43,7 @@ Status colors come from the board (see below). Default palette in order: `#4ade8
   - 已關閉: your closed issues.
 
   Each list holds at most 100 issues. A failing 其他 or 已關閉 fetch shows its error on that tab only.
-- **Board:** the list under a `## Issue 狀態` heading in the repo's `CLAUDE.md`, else `.claude/CLAUDE.md`. Each item is one label, and an item can end with `#rgb` or `#rrggbb` to set its color. The last item is the done status. Without the section, the board is 進行中, 檢驗中, 測試站待檢驗, 正式站待檢驗, 已上線待檢驗, 可處理, 討論中, 已完成. The board is re-read on every fetch.
+- **Board:** the list under a `## Issue 狀態` or `## Issue status` heading in the repo's `CLAUDE.md`, else `.claude/CLAUDE.md`. Each item is one label, and an item can end with `#rgb` or `#rrggbb` to set its color. The last item is the done status. Without the section, the board depends on the interface language: 進行中, 檢驗中, 測試站待檢驗, 正式站待檢驗, 已上線待檢驗, 可處理, 討論中, 已完成 in Chinese; In progress, In review, Ready, Discussion, Done in English. The board is re-read on every fetch.
 - **Grouping:** each issue goes in the first board label it carries, else （無狀態）, which comes last. Issues are sorted by number. 已關閉 is one group, newest first.
 - **Collapse:** click an arrow to fold one group. At first only the done group is folded. 全部收合 and 全部展開 touch only the groups on screen. The folded set and the chosen tab survive a reload.
 - **Refresh:** fetches on start, every 5 minutes, and on 重新整理. While a fetch runs, the button reads 讀取中… and further clicks are ignored. A 1-second timer notices when the focused folder or machine changes, re-checks the repo, and fetches again only when the repo changed. A failed 我的 fetch keeps the previous lists on screen.
@@ -68,6 +68,11 @@ Status colors come from the board (see below). Default palette in order: `#4ade8
   - ⇲ selects Issues, shows the panel, and closes the window.
 - **Nothing animates.** Timers only fetch data.
 
+- **Languages:** English and Traditional Chinese, from `i18n.js`.
+  - At start each copy asks the system once: `defaults read -g AppleLanguages` on macOS (first entry), `LANG` elsewhere. `zh…` gives Chinese; anything else, or a failed check, gives English.
+  - The title row has a chip naming the other language (EN or 中). It sets Herdr's shared value `issue-launcher.lang`, which every copy follows, and which overrides the detected language.
+  - Only the panel's own text is translated: tabs, buttons, messages, the "no status" and "closed" group names, and the first message to a new session. Status labels are data and stay as written. Groups keep fixed keys, so collapsed groups survive a language switch.
+
 ## Built from
 
 - **The layout**, `layouts/issue-launcher.json`: a copy of `main.json` with every id kept, because the shipped `tabs`, `spaces` and `agents` mods find `sidebar`, `panel` and `panel-body` by id. Two changes:
@@ -76,6 +81,7 @@ Status colors come from the board (see below). Default palette in order: `#4ade8
 - **One mod**, `mods/issue-launcher/`, with no `keys.json`. `props().role === "button"` draws only the button and runs no timers. Without a role it draws the panel, docked or in a window:
   - `mod.json`: `{ "place": "none", "title": "Issues", "overlay": { "kind": "window", "key": "issue-launcher", "keep": true, "width": 380, "height": 0.8 } }`. Open it with `mod.open {name: "issue-launcher"}` (`herdr-app do mod.open --name issue-launcher`, or the command palette).
   - `logic.js`: pure functions with no `herdr` imports, so `node --test` can run them. Board parsing, provider detection, CLI arguments, JSON parsing for both CLIs, grouping, mention extraction, agent filtering, the post-fetch state, tab names and the first message.
+  - `i18n.js`: the `en` and `zh-TW` strings, `pickLanguage` and `t`.
   - `main.js`: the View. It holds the state, the timers, the `exec` calls and the rendering.
 - **herdr data:** `spaces()`, `focused()`, `panes()` (folder per pane), `agents()`, `terminals()` (argv), `theme()`, `window()` (platform), `props().overlay`.
 - **herdr calls:**

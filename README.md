@@ -24,6 +24,7 @@ GitHub issues                              ✕
 - **跟著目前的專案**：取目前 space 焦點 pane 的資料夾（沒有就用 space 資料夾）所在的 git repo；切 space 就換 repo。不在 git repo 裡時顯示「目前的 space 不在 git repo 裡。」
 - **GitLab／GitHub 自動切換**：`origin` 指到 `github.com` 用 `gh`，其餘（含自架 GitLab、沒有 origin）用 `glab`。
 - **三個分頁**：我的（指派給我的 open issue）、其他（專案其他 open issue，含未指派）、已關閉（指派給我的已關閉 issue）。每份清單最多 100 張。
+- **中英文介面**：啟動時依系統語系（macOS 的 AppleLanguages，其他系統用 `LANG`）決定，`zh` 開頭用繁中、其餘英文；面板標題列的 **EN／中** 可切換，選擇存在 Herdr 共用設定 `issue-launcher.lang`，所有面板一起變。狀態 label、issue 標題與 CLI 輸出不翻譯。
 - **狀態分組**：依專案 `CLAUDE.md` 的狀態 label 分組、上色，最後一項是完成狀態（淡色、預設收起）。分頁與收合狀態會記住。
 - **對應 session**：從 agent 的分頁名、終端機標題、工作目錄（例如 `gl-<id>-` worktree）、啟動參數抽出 issue 編號（`#123`、`gl-123`、`/issues/123`、`issue 123`、`票 123`），只看同一個 repo 底下的 agent；點 `↪` 執行 `agent.focus`。
 - **開新 session**：▶ 在目前 space 開一個名為 `#<id> <標題>` 的分頁，執行 `claude -n "#<id> <標題>"`，第一句話請 Claude 用 `gh`／`glab` 讀 issue 與留言、摘要後停下等指示。
@@ -61,7 +62,7 @@ herdr-app do layout.switch --name issue-launcher   # 或 cmd-shift-l 切換
 
 ## 自訂狀態 label
 
-在專案根目錄的 `CLAUDE.md`（或 `.claude/CLAUDE.md`）加一段 `## Issue 狀態` 清單。順序就是面板的排序，最後一項是完成狀態。顏色可在後面接色碼，沒寫就依序配色。每次重新整理都會重讀。
+在專案根目錄的 `CLAUDE.md`（或 `.claude/CLAUDE.md`）加一段 `## Issue 狀態`（或英文 `## Issue status`）清單。順序就是面板的排序，最後一項是完成狀態。顏色可在後面接色碼，沒寫就依序配色。每次重新整理都會重讀。
 
 ```markdown
 ## Issue 狀態
@@ -73,7 +74,7 @@ herdr-app do layout.switch --name issue-launcher   # 或 cmd-shift-l 切換
 - 已完成
 ```
 
-沒有這段時使用預設：進行中、檢驗中、測試站待檢驗、正式站待檢驗、已上線待檢驗、可處理、討論中、已完成。
+沒有這段時依介面語言使用預設：繁中為進行中、檢驗中、測試站待檢驗、正式站待檢驗、已上線待檢驗、可處理、討論中、已完成；英文為 In progress、In review、Ready、Discussion、Done。label 要跟 GitHub／GitLab 上的名稱一致才分得進去，所以英文介面配中文 label 的 repo，請在 `CLAUDE.md` 寫出自己的清單。
 
 ## 開發
 

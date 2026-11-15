@@ -8,8 +8,8 @@
 
 ## 3. Interface language in the panel
 
-- [ ] 3.1 [after: 2.1] In `main.js`, detect once and override in shared state for the Interface language: detection at init, `issue-launcher.lang` read in render, every string through `t`, and the EN / 中 switch in the title row calling `setShared`. Verify: `herdr-app check` passes; the person confirms that clicking EN turns the docked panel and the floating window to English together, that 中 turns them back, and that the choice survives `scripts/install.sh`.
+- [x] 3.1 [after: 2.1] In `main.js`, detect once and override in shared state for the Interface language: detection at init, `issue-launcher.lang` read in render, every string through `t`, and the EN / 中 switch in the title row calling `setShared`. Verify: `herdr-app check` passes; the person confirms that clicking EN turns the docked panel and the floating window to English together, that 中 turns them back, and that the choice survives `scripts/install.sh`.
 
 ## 4. Documentation
 
-- [ ] 4.1 [after: 3.1] Update README.md and RECIPE.md: languages, detection, the switch, the `## Issue status` heading, and the English default board. Verify: content review.
+- [x] 4.1 [after: 3.1] Update README.md and RECIPE.md: languages, detection, the switch, the `## Issue status` heading, and the English default board. Verify: content review.
