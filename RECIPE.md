@@ -1,6 +1,6 @@
 # Issue launcher
 
-A floating window that lists the GitLab or GitHub issues of the repo you are working in, grouped by your board's status labels. Under each issue it shows the Herdr agents already working on it. One click jumps to an agent, starts a new Claude Code session that reads the issue, or opens the issue in the browser.
+A right-side panel, with an Issues button next to Files and Changes, that lists the GitLab or GitHub issues of the repo you are working in, grouped by your board's status labels. Under each issue it shows the Herdr agents already working on it. One click jumps to an agent, starts a new Claude Code session that reads the issue, or opens the issue in the browser.
 
 ![Issue launcher](preview.png)
 
@@ -8,9 +8,18 @@ This file is the brief: enough to build Issue launcher from an empty folder. The
 
 ## What you see
 
-A Herdr window (`kind: "window"`), 380px wide and 80% of the window's height. It sits over the layout, can be dragged anywhere, and reopens where it was left on the next start. It adds nothing to your layout.
+The `issue-launcher` layout: Herdr's `main` layout (Herdr app 0.1.15) with two additions.
 
-1. **Title row**, 30px, theme `chrome` background, 1px `border` line underneath: "GitHub issues" or "GitLab issues" (semibold), or "Issues" before a repo is known. A ✕ on the right closes the window.
+- **Issues button**, in an 88px block right of the tab bar, at its 42px height: theme `chrome` background with a 1px `border` line underneath, continuing the tab bar. The button copies the shipped Files and Changes buttons: 26px high, 8px padding, 5px gap, 6px corners, 12px text, a 14px circle-dot icon (`issues.svg`). While the right panel shows Issues it uses `selected` with `foreground` text, otherwise `chrome` with `muted` text.
+- **Issues panel**, a third child of the right panel stack after Files and Changes, so it uses the same 368px panel (resizable 280–900px).
+
+The same panel also opens as a Herdr window (`kind: "window"`), 380px wide and 80% of the window's height. The window sits over the layout, can be dragged anywhere, and reopens where it was left on the next start.
+
+The panel itself, top to bottom:
+
+1. **Title row**, 30px, theme `chrome` background, 1px `border` line underneath: "GitHub issues" or "GitLab issues" (semibold), or "Issues" before a repo is known. On the right:
+   - docked: ⧉ pops the panel out into the window
+   - window: ⇲ docks it back, shown only when the layout has the Issues panel, and ✕ closes it
 2. **Header**, then a scrolling body. 10px padding, 10px gaps, 13px text on theme `surface`:
    - "更新於 HH:MM:SS" (the last fetch time) in `dim`, then a 重新整理 button and a 全部收合 / 全部展開 button.
    - A summary of the open issues assigned to you per status, without the done status, in `muted`: "進行中 2 · 討論中 5".
@@ -53,11 +62,18 @@ Status colors come from the board (see below). Default palette in order: `#4ade8
   - A matched agent line focuses that agent (`agent.focus`).
   - ▶ opens a new tab in the active space named `#<id> <title>`, cut to 40 characters. The tab runs `claude -n "<that name>"` in the repo root, with a first message asking Claude to read the issue and its comments, summarise the requirement, acceptance criteria and open questions, and stop. The issue is read with `gh issue view <id> --json title,body,labels,comments` or `glab issue view <id> --comments`. The new session shows up under the issue by itself.
   - `#<id>` opens the issue page with `open` (macOS) or `xdg-open`. A failure posts an error notification.
+- **Issues button:** clicking it shows the right panel on Issues, or hides the panel when Issues is already shown, like Files and Changes. Herdr's tab bar remembers each space's last panel only for ids in the shared `workspace.panels` list, so the button adds `issues` to it (keeping the other entries).
+- **⧉ / ⇲:**
+  - ⧉ hides the right panel and opens the window with `openOverlay`, not `mod.open`, because `mod.open` toggles and would close an open window.
+  - ⇲ selects Issues, shows the panel, and closes the window.
 - **Nothing animates.** Timers only fetch data.
 
 ## Built from
 
-- **One mod**, `mods/issue-launcher/`, with no layout and no `keys.json`:
+- **The layout**, `layouts/issue-launcher.json`: a copy of `main.json` with every id kept, because the shipped `tabs`, `spaces` and `agents` mods find `sidebar`, `panel` and `panel-body` by id. Two changes:
+  - `panel-body` gains `{ "id": "issues", "type": "block", "content": { "mod": "issue-launcher" } }`.
+  - The `tabs` block (42px, `window_drag`) becomes weight 1 inside `{ "id": "tabs-row", "type": "row", "resizable": false, "size": { "px": 42 } }`, followed by `{ "id": "issues-button", "type": "block", "size": { "px": 88 }, "content": { "mod": "issue-launcher", "props": { "role": "button" } } }`.
+- **One mod**, `mods/issue-launcher/`, with no `keys.json`. `props().role === "button"` draws only the button and runs no timers. Without a role it draws the panel, docked or in a window:
   - `mod.json`: `{ "place": "none", "title": "Issues", "overlay": { "kind": "window", "key": "issue-launcher", "keep": true, "width": 380, "height": 0.8 } }`. Open it with `mod.open {name: "issue-launcher"}` (`herdr-app do mod.open --name issue-launcher`, or the command palette).
   - `logic.js`: pure functions with no `herdr` imports, so `node --test` can run them. Board parsing, provider detection, CLI arguments, JSON parsing for both CLIs, grouping, mention extraction, agent filtering, the post-fetch state, tab names and the first message.
   - `main.js`: the View. It holds the state, the timers, the `exec` calls and the rendering.
@@ -67,12 +83,15 @@ Status colors come from the board (see below). Default palette in order: `#4ade8
   - `readTextFile` for `CLAUDE.md`.
   - `run("tab.new", { name, space, folder, argv, task })`.
   - `run("agent.focus", { terminal })`.
-  - `notify`, `closeOverlay`.
+  - `notify`, `openOverlay`, `closeOverlay`.
+  - The button reads `layout()` for `panel.hidden` and `panel-body.active`, runs `layout.select` / `layout.show` / `layout.hide`, and calls `setShared("workspace.panels", …)`.
 - **State:** the fetched lists live on the View instance. `localStorage` keys `tab` and `collapsed` hold the per-copy choices.
 - **Programs it runs:** `git`, `gh` or `glab` (the network goes through them), `claude` in the new tab, and `open` or `xdg-open`. It reads only `CLAUDE.md` and `.claude/CLAUDE.md` inside the repo.
 
 ## Watch out
 
+- **The layout is a snapshot of `main` from Herdr app 0.1.15.** Herdr's later changes to `main` don't reach it. Re-copy `main.json` and re-apply the two changes.
+- **The gap between Changes and Issues is about 7px wider** than the gap between Files and Changes, because the shipped tab bar has 10px right padding. Avoiding it means copying the shipped `tabs` mod.
 - **`place: "right"` did not dock the mod** into the shipped `main` layout on Herdr as of 2026-11-15. That held after a restart and after switching layouts, which is why it is a window. If docking works on your Herdr, a side block is fine too.
 - **Don't symlink the mod folder or its files.** A symlinked folder never showed up in `seen.json`. With per-file symlinks, `import "./logic.js"` fails `herdr-app check` ("resolves outside the application directory") and saving the source doesn't reload. Copy the files instead. The source repo's `scripts/install.sh` does that and refuses to overwrite a folder it didn't install.
 - **Esc doesn't close a window,** so the ✕ is required. Stop mouse-down on every control (`cx.stop_propagation()`), or pressing it drags the window.
@@ -92,5 +111,11 @@ Status colors come from the board (see below). Default palette in order: `#4ade8
 - In a GitHub repo space, the window lists the same issues as `gh issue list --assignee @me`, grouped as the board says. In a repo with no remote, it shows "glab 失敗：No git remotes found.", and in a folder outside git, "目前的 space 不在 git repo 裡。"
 - Switching to a space in another repo switches the list. Moving focus within one repo doesn't change "更新於".
 - Folding a group, then reinstalling the mod, keeps it folded. ✕ closes the window and `mod.open` reopens it.
+- In the `issue-launcher` layout:
+  - Issues shows and hides the right panel on the issue list, highlighted while shown.
+  - Files and Changes still switch the panel.
+  - A space that showed Issues shows it again after switching spaces.
+  - ⧉ pops the panel out to the window and ⇲ docks it back.
+  - In `main`, the window has no ⇲.
 - ▶ opens a tab named `#<id> <title>` in which Claude summarises the issue and stops. The tab then appears under the issue, and clicking that line focuses it.
 - `#<id>` opens the issue in the browser.

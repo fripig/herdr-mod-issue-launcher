@@ -1,6 +1,6 @@
 # issue-launcher
 
-Herdr 桌面版（herdr-app）的 mod：在浮動視窗列出目前 space 所在 repo 的 GitLab／GitHub issue，依 board 狀態 label 分組，並對到 Herdr 裡正在處理該 issue 的 agent，一鍵切換或開新 Claude session。
+Herdr 桌面版（herdr-app）的 mod 與 layout：在右側面板（或浮動視窗）列出目前 space 所在 repo 的 GitLab／GitHub issue，依 board 狀態 label 分組，並對到 Herdr 裡正在處理該 issue 的 agent，一鍵切換或開新 Claude session。
 
 從零重建的說明（給其他 agent 照著做）見 [RECIPE.md](RECIPE.md)，也列在 [herdr.dev/mods](https://herdr.dev/mods)。
 
@@ -42,12 +42,22 @@ GitHub issues                              ✕
 ```sh
 scripts/install.sh
 herdr-app check ~/.config/herdr-app/mods/issue-launcher
-herdr-app do mod.open --name issue-launcher
+herdr-app do layout.switch --name issue-launcher   # 或 cmd-shift-l 切換
 ```
 
-`install.sh` 把 `mods/issue-launcher/` 的檔案複製到 `~/.config/herdr-app/mods/issue-launcher/`，並在 `.installed-from` 記下來源；資料夾不是它裝的就拒絕覆蓋。視窗可拖曳，Herdr 會記住位置並在下次啟動時重開；按 ✕ 關閉，`mod.open` 再打開。
+`install.sh` 把 `mods/issue-launcher/` 的檔案複製到 `~/.config/herdr-app/mods/issue-launcher/`，並在 `.installed-from` 記下來源；資料夾不是它裝的就拒絕覆蓋。它也會把 `layouts/issue-launcher.json` 複製到 `~/.config/herdr-app/layouts/`（不是它裝的同名 layout 就拒絕覆蓋），但不會幫你切換 layout。
 
-為什麼不用 symlink、也不停靠在側邊：實測 herdr-app 不會載入解析到 mods 資料夾以外的模組（`logic.js` 透過 symlink 會失敗），而 `mod.json` 的 `place: "right"` 在 `main` layout 裡沒有停靠。細節見 `docs/spectra/changes/add-issue-launcher-mod/design.md`。
+### issue-launcher layout
+
+切到 `issue-launcher` layout 後，分頁列右側 Files、Changes 旁多一個 **Issues** 按鈕：點了右側面板顯示 issue 清單，再點收起，和 Files／Changes 共用同一個面板；切換 space 時會記住各 space 最後開的面板（mod 會把 `issues` 加進共用設定 `workspace.panels`）。
+
+- 停靠面板標題列的 **⧉**：收起右側面板，改成可拖曳的浮動視窗（Herdr 記住位置，下次啟動重開）。
+- 浮動視窗標題列的 **⇲**：關掉視窗，回到右側 Issues 面板；**✕**：關掉視窗。
+- 不切 layout 也能用：`herdr-app do mod.open --name issue-launcher` 開浮動視窗（在 `main` 裡沒有 ⇲）。
+
+這份 layout 是 Herdr app 0.1.15 的 `main` 加兩處修改：`panel-body` 堆疊多一個 `issues` 區塊，`tabs` 區塊包進 42px 的 `tabs-row` 並在右邊加 88px 的 `issues-button` 區塊（`props: { role: "button" }`）。Herdr 之後更新 `main` 不會自動套用；要跟上時，把新的 `~/.config/herdr-app/layouts/main.json` 複製過來再做這兩處修改。
+
+為什麼要自己的 layout、也不用 symlink：內建的 `main` 與 `tabs` mod 不能改結構，`mod.json` 的 `place: "right"` 在 `main` 裡也沒有停靠；herdr-app 不會載入解析到 mods 資料夾以外的模組（`logic.js` 透過 symlink 會失敗）。細節見 `docs/spectra/changes/archive/` 裡兩個 change 的 design.md。
 
 ## 自訂狀態 label
 

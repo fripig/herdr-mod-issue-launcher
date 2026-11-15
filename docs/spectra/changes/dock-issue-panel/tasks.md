@@ -20,4 +20,4 @@
 
 ## 5. Documentation
 
-- [ ] 5.1 [after: 4.1] Update README.md and RECIPE.md: the `issue-launcher` layout, how to switch to it, that it is a copy of `main` from Herdr app 0.1.15 with the two additions, and how to re-apply them after a Herdr update. Verify: content review; the commands in both files run as written.
+- [x] 5.1 [after: 4.1] Update README.md and RECIPE.md: the `issue-launcher` layout, how to switch to it, that it is a copy of `main` from Herdr app 0.1.15 with the two additions, and how to re-apply them after a Herdr update. Verify: content review; the commands in both files run as written.
