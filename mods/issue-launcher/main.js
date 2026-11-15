@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, focused, agents, terminals, exec, readTextFile, run, notify, theme, props, openOverlay, closeOverlay, layout, shared, setShared, window as appWindow } from "herdr";
+import { spaces, panes, focused, agents, terminals, exec, readTextFile, run, notify, theme, props, openOverlay, closeOverlay, layout, shared, setShared, appHome, window as appWindow } from "herdr";
 import * as L from "./logic.js";
 
 const REFRESH_MS = 5 * 60 * 1000;
@@ -23,6 +23,21 @@ function find(node, id) {
     if (found) return found;
   }
   return null;
+}
+
+// The right panel's active child, which layout() reports correctly.
+const panelActive = () => find(layout(), "panel-body")?.active ?? null;
+
+// Whether the right panel is hidden. layout() keeps the file's `hidden`, so read Herdr's click state instead.
+async function readPanelHidden() {
+  const fileHidden = find(layout(), "panel")?.hidden ?? false;
+  const name = shared("layout");
+  if (typeof name !== "string") return null;
+  try {
+    return L.panelHidden(await readTextFile(`${appHome()}/layouts/.state/${name}.json`), fileHidden);
+  } catch {
+    return null;
+  }
 }
 
 // Where the person is working, as the shipped changes mod finds it.
@@ -70,6 +85,20 @@ export default class IssueLauncher extends View {
       const panels = shared("workspace.panels");
       const next = L.withIssuesPanel(panels);
       if (next !== panels) setShared("workspace.panels", next);
+      // Layout clicks don't re-render a mod: check the panel twice a second and redraw on change.
+      this.panelHidden = null;
+      this.panelActive = panelActive();
+      const check = (cx) => cx.spawn(async (cx) => {
+        const hidden = await readPanelHidden();
+        const active = panelActive();
+        if (hidden !== this.panelHidden || active !== this.panelActive) {
+          this.panelHidden = hidden;
+          this.panelActive = active;
+          cx.notify();
+        }
+      });
+      check(cx);
+      cx.timer.every(500, check);
       return;
     }
     this.project = null; // { key, root, on, provider }
@@ -195,15 +224,12 @@ export default class IssueLauncher extends View {
   // The Issues button, styled like the shipped tab bar's Files and Changes buttons.
   renderButton() {
     const t = theme();
-    const root = layout();
-    const hidden = find(root, "panel")?.hidden ?? true;
-    const active = find(root, "panel-body")?.active ?? null;
-    const on = L.panelOn(hidden, active);
+    const on = L.panelOn(this.panelHidden, this.panelActive);
     return h_flex().size_full().pr(10).items_center().bg(t.chrome).border_b(1).border_color(t.border)
       .child(h_flex().id("panel-issues").h(26).px(8).gap(5).flex_none().items_center().rounded(6).cursor_pointer()
         .text_size(12).bg(on ? t.selected : t.chrome).text_color(on ? t.foreground : t.muted)
         .hover((s) => s.bg(t.hover)).on_mouse_down("left", stop)
-        .on_click(() => { for (const [name, args] of L.panelToggle(hidden, active)) run(name, args); })
+        .on_click(() => { for (const [name, args] of L.panelToggle(panelActive())) run(name, args); })
         .child(svg("mods/issue-launcher/issues.svg").size(14)).child("Issues"));
   }
 

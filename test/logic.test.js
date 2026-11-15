@@ -229,12 +229,21 @@ test("panels list gains issues", () => {
 });
 
 test("button clicks", () => {
+  // layout() doesn't report the panel's shown/hidden clicks, so the click goes by the stack's active child only.
   const show = [["layout.select", { stack: "panel-body", child: "issues" }], ["layout.show", { id: "panel" }]];
-  assert.deepEqual(mod.panelToggle(true, "files"), show);
-  assert.deepEqual(mod.panelToggle(false, "changes"), show);
-  assert.deepEqual(mod.panelToggle(false, "issues"), [["layout.hide", { id: "panel" }]]);
+  assert.deepEqual(mod.panelToggle("files"), show);
+  assert.deepEqual(mod.panelToggle("changes"), show);
+  assert.deepEqual(mod.panelToggle("issues"), [["layout.toggle", { id: "panel" }]]);
   assert.equal(mod.panelOn(false, "issues"), true);
   assert.equal(mod.panelOn(true, "issues"), false);
+  assert.equal(mod.panelOn(null, "issues"), false);
+});
+
+test("panel hidden from Herdr's layout state file", () => {
+  assert.equal(mod.panelHidden('{"nodes":{"panel":{"hidden":false}}}', true), false);
+  assert.equal(mod.panelHidden('{"nodes":{"panel-body":{"active":"issues"}}}', true), true);
+  assert.equal(mod.panelHidden(null, true), true);
+  assert.equal(mod.panelHidden("not json", true), null);
 });
 
 test("pop out and dock back", () => {

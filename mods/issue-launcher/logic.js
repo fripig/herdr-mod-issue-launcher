@@ -183,12 +183,24 @@ export const withIssuesPanel = (list) => {
   return current.includes("issues") ? current : [...current, "issues"];
 };
 
-// The Issues button: on while the right panel shows issues; clicking toggles like Files and Changes.
-export const panelOn = (hidden, active) => !hidden && active === "issues";
-export const panelToggle = (hidden, active) =>
-  panelOn(hidden, active)
-    ? [["layout.hide", { id: "panel" }]]
+// The Issues button: on while the right panel shows issues (hidden null = unknown, not on).
+export const panelOn = (hidden, active) => hidden === false && active === "issues";
+// layout() reports the stack's active child but not the panel's shown/hidden clicks (Herdr app 0.1.15),
+// so the click goes by the active child alone: on issues, toggle the panel; otherwise switch to issues and show it.
+export const panelToggle = (active) =>
+  active === "issues"
+    ? [["layout.toggle", { id: "panel" }]]
     : [["layout.select", { stack: "panel-body", child: "issues" }], ["layout.show", { id: "panel" }]];
+// The panel's shown/hidden click, from Herdr's layouts/.state/<layout>.json; the layout file's value when never
+// clicked, null when the state can't be read.
+export const panelHidden = (stateText, fileHidden) => {
+  if (stateText == null) return fileHidden;
+  try {
+    return JSON.parse(stateText)?.nodes?.panel?.hidden ?? fileHidden;
+  } catch {
+    return null;
+  }
+};
 
 // The floating window, as mod.json describes it, for openOverlay (which replaces rather than toggles).
 export const WINDOW = { mod: "issue-launcher", kind: "window", key: "issue-launcher", keep: true, width: 380, height: 0.8 };
