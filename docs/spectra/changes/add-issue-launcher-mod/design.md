@@ -59,9 +59,11 @@ Fetched issue lists, board, provider, errors and fetch time live on the View ins
 
 Rejected: `{ "place": "right" }` docking. Measured on Herdr 2026-11-15: neither this mod (symlinked folder, then a real folder) nor a throwaway real-folder test mod was docked into the `main` layout or recorded in `seen.json`, after an app restart, after re-showing `main`, or after switching to `terminals` and back. The trigger for docking is undocumented, so the design does not depend on it. Rejected: cloning `main` and the shipped `tabs` mod to add a third panel button, because it forks shipped files.
 
-### Install by symlink
+### Install by copy
 
-The source of truth is this repo's `mods/issue-launcher/`. `scripts/install.sh` creates `~/.config/herdr-app/mods/issue-launcher/` as a real folder (refusing to overwrite anything that is not a folder of symlinks into this repo) and symlinks every file of `mods/issue-launcher/` into it; it is re-run after adding a file. Saving a file in the repo does not hot-reload the mod, because herdr-app watches the install folder and the links themselves do not change (measured 2026-11-15); re-running `scripts/install.sh` recreates the links and does reload it, so it is also the reload step during development. Measured 2026-11-15: a symlinked mod folder loads with `mod.open` and `herdr-app check`; a real folder of file symlinks does too. Neither was recorded in `seen.json`, so the real folder is a precaution matching how shipped and installed mods are laid out, not a proven requirement. A `README.md` documents the script and requirements.
+The source of truth is this repo's `mods/issue-launcher/`. `scripts/install.sh` copies its files (except the `jsconfig.json` and `*.d.ts` herdr-app writes itself) into `~/.config/herdr-app/mods/issue-launcher/` and records the source path and file list in `.installed-from`; it refuses to touch a folder it did not install. Re-running it is the reload step during development, because herdr-app reloads a mod when files in its own folder change.
+
+Rejected, measured 2026-11-15: a symlink to the whole folder (loads with `mod.open`, but `seen.json` never lists it), and a folder of per-file symlinks (saving in the repo does not reload the mod, and `import "./logic.js"` fails `herdr-app check` with "module `./logic.js` resolves outside the application directory").
 
 ## Implementation Contract
 
@@ -81,7 +83,7 @@ The source of truth is this repo's `mods/issue-launcher/`. `scripts/install.sh` 
 - `herdr-app check ~/.config/herdr-app/mods/issue-launcher` prints `check passed`.
 - Manual in the running app on a GitHub repo (this person's repos, e.g. claude-mod-gl-issues) and a GitLab repo: list and grouping match `gh`/`glab` output, ▶ opens a tab whose Claude summarises the issue, the new session appears under the issue, clicking it focuses it, `#id` opens the browser, switching spaces switches projects.
 
-**Scope.** In: files under `mods/issue-launcher/`, `test/`, `README.md`, `package.json` (only `"type": "module"` and a `test` script), `scripts/install.sh`. Out: everything listed in Non-Goals, changes to shipped mods, layouts or keys.json.
+**Scope.** In: files under `mods/issue-launcher/`, `test/`, `README.md`, `package.json` (only `"type": "module"` and a `test` script), `scripts/install.sh` (copy install). Out: everything listed in Non-Goals, changes to shipped mods, layouts or keys.json.
 
 ## Risks / Trade-offs
 

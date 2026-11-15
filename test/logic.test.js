@@ -5,6 +5,7 @@ import {
   groupsFor, summarize, toggle, extractMentions, sameProject, matchSessions, sessionName, initialPrompt,
   openUrlCommand, NO_STATUS, CLOSED_GROUP,
 } from "../mods/issue-launcher/logic.js";
+import * as mod from "../mods/issue-launcher/logic.js";
 
 const raw = (iid, labels = [], title = `t${iid}`) => ({ iid, title, labels, url: `u${iid}`, updatedAt: "" });
 const ids = (groups) => groups.map(([s, list]) => [s, list.map((i) => i.iid)]);
@@ -151,4 +152,11 @@ test("first message uses the provider's view command", () => {
 test("browser command per platform", () => {
   assert.deepEqual(openUrlCommand("macos", "u"), ["open", ["u"]]);
   assert.deepEqual(openUrlCommand("linux", "u"), ["xdg-open", ["u"]]);
+});
+
+test("error line skips glab's lone ERROR", () => {
+  const { errorLine } = mod;
+  assert.equal(errorLine("   ERROR  \n          \n  No git remotes found.   \n"), "No git remotes found.");
+  assert.equal(errorLine("HTTP 401: Bad credentials\nmore"), "HTTP 401: Bad credentials");
+  assert.equal(errorLine(""), "");
 });

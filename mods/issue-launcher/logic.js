@@ -133,3 +133,7 @@ export const initialPrompt = (provider, issue) =>
   `請先用 \`${viewCommand(provider, issue.iid)}\` 讀取 issue #${issue.iid} 的內容與留言，摘要需求、驗收條件與待釐清的地方。摘要完先停下來等我指示，不要開始改程式碼。`;
 
 export const openUrlCommand = (platform, url) => (platform === "macos" ? ["open", [url]] : ["xdg-open", [url]]);
+
+// The CLI's reason in one line: glab prints a lone "ERROR" before it.
+export const errorLine = (output) =>
+  (output ?? "").split("\n").map((l) => l.trim()).find((l) => l && !/^error:?$/i.test(l)) ?? "";

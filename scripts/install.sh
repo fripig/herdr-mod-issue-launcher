@@ -1,39 +1,50 @@
 #!/usr/bin/env bash
-# Install the issue-launcher mod into herdr-app as a real folder of symlinks
-# into this repo, so saving a file here hot-reloads the mod. Re-run after
-# adding or removing a file under mods/issue-launcher/.
+# Copy the issue-launcher mod into herdr-app. Re-run after every change: the copy
+# is what reloads the running mod. herdr-app refuses modules that resolve outside
+# its mods folder, so symlinks into this repo can't be used.
 set -euo pipefail
 
 src="$(cd "$(dirname "$0")/../mods/issue-launcher" && pwd)"
 dest="${HERDR_APP_HOME:-$HOME/.config/herdr-app}/mods/issue-launcher"
+manifest="$dest/.installed-from"
 
-# An older install was one symlink to the whole folder: replace only that.
+# Files herdr-app writes into every mod folder itself.
+app_owned() { case "$1" in jsconfig.json|*.d.ts) return 0 ;; esac; return 1; }
+
+# Earlier installs: one symlink to the folder, or a folder of symlinks into $src.
 if [ -L "$dest" ]; then
   if [ "$(readlink "$dest")" = "$src" ]; then rm "$dest"; else echo "refusing: $dest is a symlink to $(readlink "$dest")" >&2; exit 1; fi
 fi
 
 if [ -e "$dest" ]; then
   [ -d "$dest" ] || { echo "refusing: $dest exists and is not a folder" >&2; exit 1; }
-  for entry in "$dest"/* "$dest"/.[!.]*; do
-    [ -e "$entry" ] || [ -L "$entry" ] || continue
-    # herdr-app writes its own type files into every mod folder.
-    case "$(basename "$entry")" in jsconfig.json|*.d.ts) [ -L "$entry" ] || continue ;; esac
-    case "$(readlink "$entry" 2>/dev/null)" in
-      "$src"/*) ;;
-      *) echo "refusing: $entry is not a symlink into $src" >&2; exit 1 ;;
-    esac
-  done
+  if [ ! -f "$manifest" ] || [ "$(head -n 1 "$manifest")" != "$src" ]; then
+    for entry in "$dest"/* "$dest"/.[!.]*; do
+      [ -e "$entry" ] || [ -L "$entry" ] || continue
+      name="$(basename "$entry")"
+      if app_owned "$name" && [ ! -L "$entry" ]; then continue; fi
+      case "$(readlink "$entry" 2>/dev/null)" in
+        "$src"/*) ;;
+        *) echo "refusing: $dest was not installed from $src ($name)" >&2; exit 1 ;;
+      esac
+    done
+  fi
 fi
 
 mkdir -p "$dest"
-# Drop links whose file was removed from the repo, then link every file.
-for entry in "$dest"/*; do
-  [ -L "$entry" ] || continue
-  case "$(basename "$entry")" in jsconfig.json|*.d.ts) rm "$entry"; continue ;; esac
-  [ -e "$entry" ] || rm "$entry"
-done
+# Remove what the last install put there (or old symlinks), then copy the current files.
+if [ -f "$manifest" ]; then
+  tail -n +2 "$manifest" | while IFS= read -r name; do [ -n "$name" ] && rm -f "$dest/$name"; done
+fi
+for entry in "$dest"/*; do [ -L "$entry" ] && rm "$entry"; done
+
+files=()
 for file in "$src"/*; do
-  case "$(basename "$file")" in jsconfig.json|*.d.ts) continue ;; esac
-  [ -f "$file" ] && ln -sfn "$file" "$dest/$(basename "$file")"
+  name="$(basename "$file")"
+  [ -f "$file" ] || continue
+  app_owned "$name" && continue
+  cp "$file" "$dest/$name"
+  files+=("$name")
 done
-echo "installed: $dest -> $src"
+{ echo "$src"; printf '%s\n' "${files[@]}"; } > "$manifest"
+echo "installed ${#files[@]} files: $src -> $dest"

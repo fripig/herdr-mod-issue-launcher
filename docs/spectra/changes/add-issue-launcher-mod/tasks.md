@@ -1,6 +1,6 @@
-## 1. Scaffold and install by symlink
+## 1. Scaffold and install by copy
 
-- [x] 1.1 Create `mods/issue-launcher/` with the window `mod.json` (Floating window opened with mod.open) and a minimal `main.js` View that renders "讀取中…"; add `package.json` with only `"type": "module"` and `"test": "node --test test/"`; add `scripts/install.sh` to install by symlink (real folder, one symlink per file, refuses to replace anything else). Verify: `scripts/install.sh` run twice succeeds, `herdr-app check ~/.config/herdr-app/mods/issue-launcher` prints `check passed`, and `herdr-app do mod.open --name issue-launcher` lists `issue-launcher` in `herdr-app status` overlays with no errors.
+- [x] 1.1 Create `mods/issue-launcher/` with the window `mod.json` (Floating window opened with mod.open) and a minimal `main.js` View that renders "讀取中…"; add `package.json` with only `"type": "module"` and `"test": "node --test test/"`; add `scripts/install.sh` to install by copy (copies the files, records them in `.installed-from`, refuses to replace a folder it did not install). Verify: `scripts/install.sh` run twice succeeds, `herdr-app check ~/.config/herdr-app/mods/issue-launcher` prints `check passed`, and `herdr-app do mod.open --name issue-launcher` lists `issue-launcher` in `herdr-app status` overlays with no errors.
 
 ## 2. Pure logic module with node tests
 
@@ -12,7 +12,7 @@
 
 ## 3. Panel follows the active project
 
-- [ ] 3.1 [after: 2.5] In `main.js`, so the panel follows the active project (Project comes from the active space), resolve the project from (focused pane cwd → focused terminal cwd → space folder, `on` = space machine), run `git rev-parse --show-toplevel` and `git remote get-url origin` through `exec`, read the board from CLAUDE.md with `readTextFile`, and fetch the three lists with refresh and errors handling: one fetch at a time, start-up, 5-minute timer, 1-second project-key check, 重新整理 button, "更新於 HH:MM:SS", red "<cli> 失敗：…" line keeping the previous list, per-tab errors for 其他/已關閉, and the "目前的 space 不在 git repo 裡。" message. Verify: `herdr-app check` passes; in the app, the panel lists this person's GitHub issues for claude-mod-gl-issues, switching to a space in another repo switches the list, a non-git space shows the message, and a space in a GitLab repo where `glab auth status` fails shows the red "glab 失敗：…" line.
+- [x] 3.1 [after: 2.5] In `main.js`, so the panel follows the active project (Project comes from the active space), resolve the project from (focused pane cwd → focused terminal cwd → space folder, `on` = space machine), run `git rev-parse --show-toplevel` and `git remote get-url origin` through `exec`, read the board from CLAUDE.md with `readTextFile`, and fetch the three lists with refresh and errors handling: one fetch at a time, start-up, 5-minute timer, 1-second project-key check, 重新整理 button, "更新於 HH:MM:SS", red "<cli> 失敗：…" line keeping the previous list, per-tab errors for 其他/已關閉, and the "目前的 space 不在 git repo 裡。" message. Verify: `herdr-app check` passes; in the app, the panel lists this person's GitHub issues for claude-mod-gl-issues, switching to a space in another repo switches the list, a non-git space shows the message, and a space in a GitLab repo where `glab auth status` fails shows the red "glab 失敗：…" line.
 
 ## 4. Panel UI
 
