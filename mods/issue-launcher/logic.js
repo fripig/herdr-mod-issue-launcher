@@ -2,8 +2,9 @@
 import { t } from "./i18n.js";
 
 // Group keys (also what the collapsed set stores); groupName shows them in the interface language.
-export const NO_STATUS = "（無狀態）";
-export const CLOSED_GROUP = "已關閉";
+// They can't match a status label, so a real label named "已關閉" is never translated.
+export const NO_STATUS = "@issue-launcher:no-status";
+export const CLOSED_GROUP = "@issue-launcher:closed";
 export const groupName = (key, lang) => (key === NO_STATUS ? t(lang, "noStatus") : key === CLOSED_GROUP ? t(lang, "closedGroup") : key);
 // Colors, in order, for status labels that don't name one.
 export const PALETTE = ["#4ade80", "#facc15", "#22d3ee", "#c084fc", "#60a5fa", "#fb923c", "#f472b6"];
@@ -152,7 +153,7 @@ export const expandShown = (collapsed, shown) => collapsed.filter((s) => !shown.
 export const emptyData = () => ({ mine: null, others: null, closed: null, board: null, fetchedAt: null, error: null, errors: {} });
 
 // What the panel shows after a fetch. Each result is { raws } or { error }.
-// A failed 我的 keeps every previous list; a failed 其他 or 已關閉 keeps that list and errors on its tab only.
+// A failed mine list keeps every previous list; a failed others or closed list keeps that list and errors on its tab only.
 export const nextData = (prev, { mine, all, closed }, board, fetchedAt) =>
   mine.error
     ? { ...prev, board, fetchedAt, error: mine.error }

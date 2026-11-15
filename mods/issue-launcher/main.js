@@ -2,7 +2,7 @@ import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, focused, agents, terminals, exec, readTextFile, run, notify, theme, props, openOverlay, closeOverlay, layout, shared, setShared, appHome, window as appWindow } from "herdr";
 import * as L from "./logic.js";
-import { LANGUAGES, pickLanguage, firstAppleLanguage, t as tr } from "./i18n.js";
+import { languageFromDetection, chooseLanguage, t as tr } from "./i18n.js";
 
 const REFRESH_MS = 5 * 60 * 1000;
 const TABS = [["mine", "tabMine", "emptyMine"], ["others", "tabOthers", "emptyOthers"], ["closed", "tabClosed", "emptyClosed"]];
@@ -12,15 +12,11 @@ const counted = (lang, label, n) => (lang === "en" ? `${label} (${n})` : `${labe
 
 // The system language, asked once per panel copy: macOS AppleLanguages, else LANG.
 async function detectLanguage() {
-  try {
-    const res = appWindow()?.platform === "macos"
-      ? await exec("defaults", ["read", "-g", "AppleLanguages"], { timeout: 5000 })
-      : await exec("sh", ["-c", 'printf %s "$LANG"'], { timeout: 5000 });
-    if (res.code !== 0) return "en";
-    return pickLanguage(appWindow()?.platform === "macos" ? firstAppleLanguage(res.stdout) : res.stdout);
-  } catch {
-    return "en";
-  }
+  const platform = appWindow()?.platform;
+  const res = await (platform === "macos"
+    ? exec("defaults", ["read", "-g", "AppleLanguages"], { timeout: 5000 })
+    : exec("sh", ["-c", 'printf %s "$LANG"'], { timeout: 5000 })).catch(() => null);
+  return languageFromDetection(platform, res);
 }
 // The window drags on any press a control doesn't stop.
 const stop = (_e, cx) => cx.stop_propagation();
@@ -140,7 +136,7 @@ export default class IssueLauncher extends View {
     });
   }
 
-  // force: fetch the issue lists even when the repo is the same (start-up, timer, 重新整理).
+  // force: fetch the issue lists even when the repo is the same (start-up, timer, the `refresh` button).
   refresh(cx, force) {
     if (this.loading) {
       this.queued = Boolean(this.queued) || force;
@@ -199,8 +195,7 @@ export default class IssueLauncher extends View {
 
   // The shared choice when set, else what the system says.
   lang() {
-    const chosen = shared(LANG_KEY);
-    return LANGUAGES.includes(chosen) ? chosen : this.detected;
+    return chooseLanguage(shared(LANG_KEY), this.detected);
   }
 
   // Agents in this project, as matchSessions takes them.

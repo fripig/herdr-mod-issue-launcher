@@ -33,3 +33,16 @@ test("placeholders and fallback", () => {
   assert.equal(t("zh-TW", "switchLabel"), "EN");
   assert.equal(t("fr", "refresh"), "Refresh");
 });
+
+test("detection result and chosen language", async () => {
+  const { languageFromDetection, chooseLanguage } = await import("../mods/issue-launcher/i18n.js");
+  assert.equal(languageFromDetection("macos", { code: 0, stdout: '(\n    "zh-Hant-TW"\n)' }), "zh-TW");
+  assert.equal(languageFromDetection("linux", { code: 0, stdout: "zh_TW.UTF-8" }), "zh-TW");
+  assert.equal(languageFromDetection("linux", { code: 0, stdout: "en_US.UTF-8" }), "en");
+  assert.equal(languageFromDetection("macos", { code: 1, stdout: "zh-Hant-TW" }), "en");
+  assert.equal(languageFromDetection("macos", null), "en");
+  assert.equal(chooseLanguage("zh-TW", "en"), "zh-TW");
+  assert.equal(chooseLanguage("en", "zh-TW"), "en");
+  assert.equal(chooseLanguage("fr", "zh-TW"), "zh-TW");
+  assert.equal(chooseLanguage(undefined, "en"), "en");
+});

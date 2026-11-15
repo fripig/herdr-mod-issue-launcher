@@ -293,3 +293,12 @@ test("English first message", () => {
   assert.ok(p.includes("#15"));
   assert.ok(p.startsWith("First read"));
 });
+
+test("a real label named like a built-in group is not translated", () => {
+  const board = parseBoard("## Issue 狀態\n- 已關閉\n- 完成\n");
+  const issues = [raw(1, ["已關閉"])].map((r) => toIssue(r, board));
+  const [[key]] = groupsFor("mine", issues, board);
+  assert.equal(mod.groupName(key, "en"), "已關閉");
+  assert.notEqual(NO_STATUS, "（無狀態）");
+  assert.notEqual(CLOSED_GROUP, "已關閉");
+});

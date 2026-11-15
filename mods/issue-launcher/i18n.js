@@ -54,6 +54,14 @@ export const pickLanguage = (value) => (/^zh/i.test((value ?? "").trim()) ? "zh-
 // The first entry of `defaults read -g AppleLanguages`, which prints a plist array like ("zh-Hant-TW", en).
 export const firstAppleLanguage = (stdout) => /[A-Za-z][\w-]*/.exec((stdout ?? "").replace(/^\s*\(/, ""))?.[0] ?? "";
 
+// What a detection run says: Chinese only when the program succeeded and named a zh language.
+// result is exec's { code, stdout }, or null when it couldn't run.
+export const languageFromDetection = (platform, result) =>
+  !result || result.code !== 0 ? "en" : pickLanguage(platform === "macos" ? firstAppleLanguage(result.stdout) : result.stdout);
+
+// The shared choice when it is one of ours, else the detected language.
+export const chooseLanguage = (chosen, detected) => (LANGUAGES.includes(chosen) ? chosen : detected);
+
 // The text for key in lang, with {name} placeholders filled; English when the language or key is missing.
 export const t = (lang, key, params = {}) => {
   const text = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key;
