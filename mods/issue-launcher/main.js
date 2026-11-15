@@ -202,7 +202,7 @@ export default class IssueLauncher extends View {
     return h_flex().size_full().pr(10).items_center().bg(t.chrome).border_b(1).border_color(t.border)
       .child(h_flex().id("panel-issues").h(26).px(8).gap(5).flex_none().items_center().rounded(6).cursor_pointer()
         .text_size(12).bg(on ? t.selected : t.chrome).text_color(on ? t.foreground : t.muted)
-        .hover((s) => s.bg(t.hover))
+        .hover((s) => s.bg(t.hover)).on_mouse_down("left", stop)
         .on_click(() => { for (const [name, args] of L.panelToggle(hidden, active)) run(name, args); })
         .child(svg("mods/issue-launcher/issues.svg").size(14)).child("Issues"));
   }

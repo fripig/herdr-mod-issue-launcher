@@ -116,7 +116,8 @@
                 "props": {
                   "role": "button"
                 }
-              }
+              },
+              "window_drag": true
             }
           ]
         },

@@ -46,28 +46,36 @@ done
 
 [ -L "$dest" ] && rm "$dest"
 mkdir -p "$dest" "$home/layouts"
-# Remove what the last install put there (or old symlinks), then copy the current files.
+
+# What this install puts in place: mod files by name, layouts as layout:<name>.
+files=()
+for file in "$src"/*; do
+  name="$(basename "$file")"
+  [ -f "$file" ] || continue
+  app_owned "$name" && continue
+  files+=("$name")
+done
+for layout in "$repo"/layouts/*.json; do
+  [ -f "$layout" ] && files+=("layout:$(basename "$layout")")
+done
+wanted() { printf '%s\n' "${files[@]}" | grep -qxF "$1"; }
+
+# Remove only what the last install put there and this one doesn't (and old symlinks).
+# Files that stay are overwritten in place, so a layout in use never disappears.
 printf '%s\n' "$installed" | while IFS= read -r entry; do
+  [ -n "$entry" ] && ! wanted "$entry" || continue
   case "$entry" in
-    "") ;;
     layout:*) rm -f "$home/layouts/${entry#layout:}" ;;
     *) rm -f "$dest/$entry" ;;
   esac
 done
 for entry in "$dest"/*; do [ -L "$entry" ] && rm "$entry"; done
 
-files=()
-for file in "$src"/*; do
-  name="$(basename "$file")"
-  [ -f "$file" ] || continue
-  app_owned "$name" && continue
-  cp "$file" "$dest/$name"
-  files+=("$name")
-done
-for layout in "$repo"/layouts/*.json; do
-  [ -f "$layout" ] || continue
-  cp "$layout" "$home/layouts/$(basename "$layout")"
-  files+=("layout:$(basename "$layout")")
+for entry in "${files[@]}"; do
+  case "$entry" in
+    layout:*) cp "$repo/layouts/${entry#layout:}" "$home/layouts/${entry#layout:}" ;;
+    *) cp "$src/$entry" "$dest/$entry" ;;
+  esac
 done
 { echo "$src"; printf '%s\n' "${files[@]}"; } > "$manifest"
 echo "installed ${#files[@]} files: $src -> $dest"
