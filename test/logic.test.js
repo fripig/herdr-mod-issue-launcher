@@ -160,3 +160,59 @@ test("error line skips glab's lone ERROR", () => {
   assert.equal(errorLine("HTTP 401: Bad credentials\nmore"), "HTTP 401: Bad credentials");
   assert.equal(errorLine(""), "");
 });
+
+// Review fixes
+
+test("issue words need a word boundary", () => {
+  assert.deepEqual([...extractMentions("reissue 5").keys()], []);
+  assert.deepEqual([...extractMentions("票5 issue#6").keys()], [5, 6]);
+});
+
+test("session name cuts on characters, not UTF-16 units", () => {
+  const name = sessionName(raw(1, [], "😀".repeat(50)));
+  assert.equal([...name].length, 40);
+  assert.ok(!name.includes("�"));
+  assert.equal([...name].at(-2), "😀");
+});
+
+test("collapse/expand all only touches shown groups", () => {
+  assert.deepEqual(mod.collapseShown(["已完成"], ["進行中", "討論中"]), ["已完成", "進行中", "討論中"]);
+  assert.deepEqual(mod.expandShown(["已完成", "進行中", "已關閉"], ["進行中", "討論中"]), ["已完成", "已關閉"]);
+});
+
+test("CLI not logged in keeps the previous list", () => {
+  const prev = { ...mod.emptyData(), mine: [raw(1)], others: [raw(2)], closed: [raw(3)], fetchedAt: "10:00:00" };
+  const next = mod.nextData(prev, { mine: { error: "401 Unauthorized" }, all: { raws: [] }, closed: { raws: [] } }, DEFAULT_BOARD, "10:05:00");
+  assert.equal(next.error, "401 Unauthorized");
+  assert.deepEqual(next.mine.map((i) => i.iid), [1]);
+  assert.deepEqual(next.others.map((i) => i.iid), [2]);
+  assert.equal(next.fetchedAt, "10:05:00");
+});
+
+test("empty list and per-tab errors", () => {
+  const prev = { ...mod.emptyData(), others: [raw(9)], closed: [raw(8)] };
+  const next = mod.nextData(prev, { mine: { raws: [] }, all: { error: "boom" }, closed: { raws: [raw(4)] } }, DEFAULT_BOARD, "t");
+  assert.deepEqual(next.mine, []);
+  assert.equal(next.error, null);
+  assert.deepEqual(next.others.map((i) => i.iid), [9]);
+  assert.deepEqual(next.errors, { others: "boom", closed: null });
+  assert.deepEqual(next.closed.map((i) => i.iid), [4]);
+});
+
+test("agents are limited to the project's machine and folder", () => {
+  const live = {
+    spaces: [{ id: "s1", machine: null }, { id: "s2", machine: "vps" }],
+    panes: [{ pane: "p1", cwd: "/repo/a" }, { pane: "p2", cwd: "/repo/a" }, { pane: "p3", cwd: "/other" }],
+    terminals: [{ address: "t1", argv: ["claude", "-n", "#12 x"] }],
+    agents: [
+      { address: "t1", pane: "p1", space: "s1", tab_name: "1", title: "Claude", status: "working" },
+      { address: "vps/t2", pane: "p2", space: "s2", tab_name: "#12 y", title: "", status: "idle" },
+      { address: "t3", pane: "p3", space: "s1", tab_name: "#12 z", title: "", status: "idle" },
+    ],
+  };
+  const here = mod.agentInputs(live, { root: "/repo/a", on: null });
+  assert.deepEqual(here.map((a) => a.address), ["t1"]);
+  assert.equal(here[0].label, "Claude");
+  assert.ok(here[0].text.includes("claude -n #12 x"));
+  assert.deepEqual(mod.agentInputs(live, null), []);
+});

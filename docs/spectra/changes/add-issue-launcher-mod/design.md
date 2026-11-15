@@ -51,7 +51,7 @@ For each agent in `agents()`, take the pane's `cwd` from `panes()` (fallback: th
 
 ### State and refresh
 
-Fetched issue lists, board, provider, errors and fetch time live on the View instance. The selected tab and collapsed groups are kept in `localStorage` keys `tab` and `collapsed` (JSON, wrapped in try/catch). One fetch at a time (`this.loading`); a 5-minute `cx.timer.every`, a 1-second timer that only compares the project key and triggers a fetch when it changed, the refresh button, and start-up. 我的 failing keeps previous lists; 其他 / 已關閉 failures are stored per tab.
+Fetched issue lists, board, provider, errors and fetch time live on the View instance. The selected tab and collapsed groups are kept in `localStorage` keys `tab` and `collapsed` (JSON, wrapped in try/catch). One fetch at a time (`this.loading`); a 5-minute `cx.timer.every`, a 1-second timer that, when the focused folder or machine changes, re-checks the repository with `git rev-parse` and fetches issues only if the project key changed, the refresh button, and start-up. 我的 failing keeps previous lists; 其他 / 已關閉 failures are stored per tab.
 
 ### Floating window opened with mod.open
 
@@ -83,7 +83,7 @@ Rejected, measured 2026-11-15: a symlink to the whole folder (loads with `mod.op
 - `herdr-app check ~/.config/herdr-app/mods/issue-launcher` prints `check passed`.
 - Manual in the running app on a GitHub repo (this person's repos, e.g. claude-mod-gl-issues) and a GitLab repo: list and grouping match `gh`/`glab` output, ▶ opens a tab whose Claude summarises the issue, the new session appears under the issue, clicking it focuses it, `#id` opens the browser, switching spaces switches projects.
 
-**Scope.** In: files under `mods/issue-launcher/`, `test/`, `README.md`, `package.json` (only `"type": "module"` and a `test` script), `scripts/install.sh` (copy install). Out: everything listed in Non-Goals, changes to shipped mods, layouts or keys.json.
+**Scope.** In: files under `mods/issue-launcher/`, `test/`, `README.md`, `package.json` (`name`, `private`, `"type": "module"` and a `test` script), `.gitignore` (the `jsconfig.json` and `*.d.ts` herdr-app writes into mod folders), `scripts/install.sh` (copy install). Out: everything listed in Non-Goals, changes to shipped mods, layouts or keys.json.
 
 ## Risks / Trade-offs
 

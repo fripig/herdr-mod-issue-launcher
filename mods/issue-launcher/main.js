@@ -52,7 +52,7 @@ async function loadBoard(root, on) {
   return L.DEFAULT_BOARD;
 }
 
-const emptyData = () => ({ mine: null, others: null, closed: null, board: L.DEFAULT_BOARD, fetchedAt: null, error: null, errors: {} });
+const emptyData = L.emptyData;
 
 export default class IssueLauncher extends View {
   init(_props, cx) {
@@ -60,42 +60,45 @@ export default class IssueLauncher extends View {
     this.notGit = false;
     this.data = emptyData();
     this.loading = false;
-    this.queued = false;
+    this.queued = null; // null, or whether the queued refresh must refetch issues
     this.where = null;
     this.launching = new Set();
     this.tab = load("tab", "mine");
     this.collapsed = load("collapsed", null);
-    this.refresh(cx);
-    cx.timer.every(REFRESH_MS, (cx) => this.refresh(cx));
-    // Only a change of folder or machine starts a fetch; the fetch decides whether the repo changed.
+    this.refresh(cx, true);
+    cx.timer.every(REFRESH_MS, (cx) => this.refresh(cx, true));
+    // A change of folder or machine only checks the repo; issues are fetched again when the repo changed.
     cx.timer.every(1000, (cx) => {
       const { cwd, on } = location();
       const where = `${on ?? ""}\n${cwd ?? ""}`;
-      if (where !== this.where) this.refresh(cx);
+      if (where !== this.where) this.refresh(cx, false);
     });
   }
 
-  refresh(cx) {
+  // force: fetch the issue lists even when the repo is the same (start-up, timer, 重新整理).
+  refresh(cx, force) {
     if (this.loading) {
-      this.queued = true;
+      this.queued = Boolean(this.queued) || force;
       return;
     }
     this.loading = true;
+    cx.notify();
     cx.spawn(async (cx) => {
       try {
-        await this.fetch(cx);
+        await this.fetch(cx, force);
       } finally {
         this.loading = false;
         cx.notify();
-        if (this.queued) {
-          this.queued = false;
-          this.refresh(cx);
+        if (this.queued !== null) {
+          const again = this.queued;
+          this.queued = null;
+          this.refresh(cx, again);
         }
       }
     });
   }
 
-  async fetch(cx) {
+  async fetch(cx, force) {
     const { cwd, on } = location();
     this.where = `${on ?? ""}\n${cwd ?? ""}`;
     const top = cwd ? await exec("git", ["rev-parse", "--show-toplevel"], { cwd, on }).catch(() => null) : null;
@@ -113,6 +116,8 @@ export default class IssueLauncher extends View {
       this.project = { key, root, on, provider: L.detectProvider(remote?.code === 0 ? remote.stdout.trim() : "") };
       this.data = emptyData();
       cx.notify();
+    } else if (!force) {
+      return;
     }
     const { provider } = this.project;
     const board = await loadBoard(root, on);
@@ -124,42 +129,12 @@ export default class IssueLauncher extends View {
     };
     const settle = (tab) => list(tab).then((raws) => ({ raws }), (err) => ({ error: err?.message ?? String(err) }));
     const [mine, all, closed] = await Promise.all([settle("mine"), settle("others"), settle("closed")]);
-    // The project changed while fetching: that fetch is queued and wins.
-    if (this.project?.key !== key) return;
-    const prev = this.data;
-    const fetchedAt = clock(new Date());
-    if (mine.error) {
-      this.data = { ...prev, board, fetchedAt, error: mine.error };
-      return;
-    }
-    this.data = {
-      board,
-      fetchedAt,
-      error: null,
-      mine: mine.raws,
-      others: all.raws ? L.othersOf(all.raws, mine.raws) : prev.others,
-      closed: closed.raws ?? prev.closed,
-      errors: { others: all.error ?? null, closed: closed.error ?? null },
-    };
+    this.data = L.nextData(this.data, { mine, all, closed }, board, clock(new Date()));
   }
 
   // Agents in this project, as matchSessions takes them.
   agentsHere() {
-    const project = this.project;
-    if (!project) return [];
-    const paneCwd = new Map(panes().map((p) => [p.pane, p.cwd]));
-    const terms = new Map(terminals().map((t) => [t.address, t]));
-    const machineOf = new Map(spaces().map((s) => [s.id, s.machine ?? null]));
-    return agents().flatMap((a) => {
-      if ((machineOf.get(a.space) ?? null) !== (project.on ?? null)) return [];
-      const t = terms.get(a.address);
-      const cwd = paneCwd.get(a.pane) ?? t?.cwd ?? null;
-      if (!L.sameProject(cwd, project.root)) return [];
-      const argv = Array.isArray(t?.argv) ? t.argv.join(" ") : "";
-      // An unnamed tab is called by its position: the title says more then.
-      const label = /^\d+$/.test(a.tab_name ?? "") ? a.title || a.tab_name : a.tab_name || a.title || a.address;
-      return [{ address: a.address, cwd, status: a.status, label, text: [a.tab_name, a.title, cwd, argv].join("\n") }];
-    });
+    return L.agentInputs({ agents: agents(), panes: panes(), terminals: terminals(), spaces: spaces() }, this.project);
   }
 
   start(issue, cx) {
@@ -235,9 +210,9 @@ export default class IssueLauncher extends View {
     const header = v_flex().gap(4).flex_none()
       .child(h_flex().gap(6).items_center()
         .child(div().text_color(t.dim).child(data.fetchedAt ? `更新於 ${data.fetchedAt}` : this.notGit ? "" : "讀取中…"))
-        .child(button("refresh", this.loading ? "讀取中…" : "重新整理", (cx) => this.refresh(cx)))
+        .child(button("refresh", this.loading ? "讀取中…" : "重新整理", (cx) => { if (!this.loading) this.refresh(cx, true); }))
         .when(groups.length > 0, (el) => el.child(button("toggle-all", allClosed ? "全部展開" : "全部收合",
-          (cx) => this.setCollapsed(allClosed ? [] : groups.map(([s]) => s), cx)))))
+          (cx) => this.setCollapsed((allClosed ? L.expandShown : L.collapseShown)(closedGroups, groups.map(([s]) => s)), cx)))))
       .when(Boolean(summary), (el) => el.child(div().text_color(t.muted).truncate().child(summary)))
       .child(h_flex().gap(4).children(TABS.map(([id, label]) =>
         button(`tab-${id}`, `${label}（${lists[id] ? lists[id].length : "…"}）`, (cx) => this.setTab(id, cx), { on: this.tab === id, dim: this.tab !== id }))));

@@ -96,7 +96,7 @@ export const summarize = (issues, board = DEFAULT_BOARD) =>
 export const toggle = (list, status) => (list.includes(status) ? list.filter((s) => s !== status) : [...list, status]);
 
 // Issue numbers after #, gl-, /issues/, /work_items/, "issue", "work item" or 票, with how often each appears.
-const MENTION = /(?:\/(?:work_items|issues)\/|\bgl-|#|(?:issue|work item|票) ?#?)(\d{1,5})\b/gi;
+const MENTION = /(?:\/(?:work_items|issues)\/|\bgl-|#|(?:\b(?:issue|work item)|票) ?#?)(\d{1,5})\b/gi;
 export const extractMentions = (text) => {
   const counts = new Map();
   for (const m of (text ?? "").matchAll(MENTION)) {
@@ -124,8 +124,8 @@ export const matchSessions = (issues, agents) => {
 export const STATUS_MARK = { working: "◑", blocked: "!", done: "✓", idle: "·" };
 
 export const sessionName = (issue) => {
-  const name = `#${issue.iid} ${issue.title}`;
-  return name.length > 40 ? `${name.slice(0, 39)}…` : name;
+  const chars = [...`#${issue.iid} ${issue.title}`];
+  return chars.length > 40 ? `${chars.slice(0, 39).join("")}…` : chars.join("");
 };
 
 // The new session's first message: read the issue and its comments with the CLI, summarise, then wait.
@@ -137,3 +137,42 @@ export const openUrlCommand = (platform, url) => (platform === "macos" ? ["open"
 // The CLI's reason in one line: glab prints a lone "ERROR" before it.
 export const errorLine = (output) =>
   (output ?? "").split("\n").map((l) => l.trim()).find((l) => l && !/^error:?$/i.test(l)) ?? "";
+
+// W3: collapse or expand only the groups on screen, keeping other tabs' choices.
+export const collapseShown = (collapsed, shown) => [...new Set([...collapsed, ...shown])];
+export const expandShown = (collapsed, shown) => collapsed.filter((s) => !shown.includes(s));
+
+export const emptyData = () => ({ mine: null, others: null, closed: null, board: DEFAULT_BOARD, fetchedAt: null, error: null, errors: {} });
+
+// What the panel shows after a fetch. Each result is { raws } or { error }.
+// A failed 我的 keeps every previous list; a failed 其他 or 已關閉 keeps that list and errors on its tab only.
+export const nextData = (prev, { mine, all, closed }, board, fetchedAt) =>
+  mine.error
+    ? { ...prev, board, fetchedAt, error: mine.error }
+    : {
+        board,
+        fetchedAt,
+        error: null,
+        mine: mine.raws,
+        others: all.raws ? othersOf(all.raws, mine.raws) : prev.others,
+        closed: closed.raws ?? prev.closed,
+        errors: { others: all.error ?? null, closed: closed.error ?? null },
+      };
+
+// Herdr's live agents as matchSessions takes them: same machine as the project, folder in the project.
+export const agentInputs = ({ agents, panes, terminals, spaces }, project) => {
+  if (!project) return [];
+  const paneCwd = new Map(panes.map((p) => [p.pane, p.cwd]));
+  const terms = new Map(terminals.map((t) => [t.address, t]));
+  const machineOf = new Map(spaces.map((s) => [s.id, s.machine ?? null]));
+  return agents.flatMap((a) => {
+    if ((machineOf.get(a.space) ?? null) !== (project.on ?? null)) return [];
+    const t = terms.get(a.address);
+    const cwd = paneCwd.get(a.pane) ?? t?.cwd ?? null;
+    if (!sameProject(cwd, project.root)) return [];
+    const argv = Array.isArray(t?.argv) ? t.argv.join(" ") : "";
+    // An unnamed tab is called by its position: the title says more then.
+    const label = /^\d+$/.test(a.tab_name ?? "") ? a.title || a.tab_name : a.tab_name || a.title || a.address;
+    return [{ address: a.address, cwd, status: a.status, label, text: [a.tab_name, a.title, cwd, argv].join("\n") }];
+  });
+};
