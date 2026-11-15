@@ -1,10 +1,10 @@
 ## 1. Panel toggle and panels list logic
 
-- [ ] 1.1 Add `withIssuesPanel` and `panelToggle` to `mods/issue-launcher/logic.js` (workspace.panels gets issues; Button role in the same mod's click logic). Verify: `node --test test/` passes new tests asserting every row of the spec's "panels list" and "button clicks" example tables.
+- [x] 1.1 Add `withIssuesPanel` and `panelToggle` to `mods/issue-launcher/logic.js` (workspace.panels gets issues; Button role in the same mod's click logic). Verify: `node --test test/` passes new tests asserting every row of the spec's "panels list" and "button clicks" example tables.
 
 ## 2. Own layout copied from main
 
-- [ ] 2.1 Add `layouts/issue-launcher.json` as the Docked issue panel layout (Own layout copied from main): Herdr app 0.1.15's `main.json` with all ids and look fields kept, `issues` as the third child of `panel-body`, and the `tabs` block wrapped in a 42px `tabs-row` with an 88px `issues-button` block (`props: { role: "button" }`). Extend `scripts/install.sh` to install the layout by copy, listing it in `.installed-from` and refusing a layout it did not install. Verify: `jq` shows the `files`, `changes`, `issues` children and the `issues-button` block; `scripts/install.sh` succeeds twice; in an isolated `HERDR_APP_HOME` with a foreign `layouts/issue-launcher.json`, it exits 1 with "refusing" and leaves the file unchanged.
+- [x] 2.1 Add `layouts/issue-launcher.json` as the Docked issue panel layout (Own layout copied from main): Herdr app 0.1.15's `main.json` with all ids and look fields kept, `issues` as the third child of `panel-body`, and the `tabs` block wrapped in a 42px `tabs-row` with an 88px `issues-button` block (`props: { role: "button" }`). Extend `scripts/install.sh` to install the layout by copy, listing it in `.installed-from` and refusing a layout it did not install. Verify: `jq` shows the `files`, `changes`, `issues` children and the `issues-button` block; `scripts/install.sh` succeeds twice; in an isolated `HERDR_APP_HOME` with a foreign `layouts/issue-launcher.json`, it exits 1 with "refusing" and leaves the file unchanged.
 
 ## 3. Issues button in the tab bar
 

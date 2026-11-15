@@ -216,3 +216,23 @@ test("agents are limited to the project's machine and folder", () => {
   assert.ok(here[0].text.includes("claude -n #12 x"));
   assert.deepEqual(mod.agentInputs(live, null), []);
 });
+
+// dock-issue-panel
+
+test("panels list gains issues", () => {
+  assert.deepEqual(mod.withIssuesPanel(undefined), ["files", "changes", "issues"]);
+  assert.deepEqual(mod.withIssuesPanel(null), ["files", "changes", "issues"]);
+  assert.deepEqual(mod.withIssuesPanel(["files", "changes"]), ["files", "changes", "issues"]);
+  assert.deepEqual(mod.withIssuesPanel([]), ["issues"]);
+  const same = ["files", "changes", "issues"];
+  assert.equal(mod.withIssuesPanel(same), same);
+});
+
+test("button clicks", () => {
+  const show = [["layout.select", { stack: "panel-body", child: "issues" }], ["layout.show", { id: "panel" }]];
+  assert.deepEqual(mod.panelToggle(true, "files"), show);
+  assert.deepEqual(mod.panelToggle(false, "changes"), show);
+  assert.deepEqual(mod.panelToggle(false, "issues"), [["layout.hide", { id: "panel" }]]);
+  assert.equal(mod.panelOn(false, "issues"), true);
+  assert.equal(mod.panelOn(true, "issues"), false);
+});

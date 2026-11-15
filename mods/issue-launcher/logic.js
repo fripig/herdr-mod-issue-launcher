@@ -176,3 +176,16 @@ export const agentInputs = ({ agents, panes, terminals, spaces }, project) => {
     return [{ address: a.address, cwd, status: a.status, label, text: [a.tab_name, a.title, cwd, argv].join("\n") }];
   });
 };
+
+// Herdr's tab bar restores a space's panel only if its id is in workspace.panels (default files, changes).
+export const withIssuesPanel = (list) => {
+  const current = Array.isArray(list) ? list : ["files", "changes"];
+  return current.includes("issues") ? current : [...current, "issues"];
+};
+
+// The Issues button: on while the right panel shows issues; clicking toggles like Files and Changes.
+export const panelOn = (hidden, active) => !hidden && active === "issues";
+export const panelToggle = (hidden, active) =>
+  panelOn(hidden, active)
+    ? [["layout.hide", { id: "panel" }]]
+    : [["layout.select", { stack: "panel-body", child: "issues" }], ["layout.show", { id: "panel" }]];
