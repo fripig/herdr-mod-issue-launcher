@@ -4,3 +4,4 @@
 # herdr-app writes these into every mod folder
 mods/*/jsconfig.json
 mods/*/*.d.ts
+docs/spectra/.vector-search.db*
