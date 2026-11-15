@@ -1,7 +1,10 @@
 // The issue launcher's pure logic. No herdr or gpui-kit imports, so `node --test` runs it.
+import { t } from "./i18n.js";
 
+// Group keys (also what the collapsed set stores); groupName shows them in the interface language.
 export const NO_STATUS = "（無狀態）";
 export const CLOSED_GROUP = "已關閉";
+export const groupName = (key, lang) => (key === NO_STATUS ? t(lang, "noStatus") : key === CLOSED_GROUP ? t(lang, "closedGroup") : key);
 // Colors, in order, for status labels that don't name one.
 export const PALETTE = ["#4ade80", "#facc15", "#22d3ee", "#c084fc", "#60a5fa", "#fb923c", "#f472b6"];
 
@@ -17,11 +20,14 @@ export const makeBoard = (entries) => {
 export const DEFAULT_BOARD = makeBoard(
   ["進行中", "檢驗中", "測試站待檢驗", "正式站待檢驗", "已上線待檢驗", "可處理", "討論中", "已完成"].map((name) => ({ name })),
 );
+export const EN_BOARD = makeBoard(["In progress", "In review", "Ready", "Discussion", "Done"].map((name) => ({ name })));
+// The board used when CLAUDE.md has none: labels are data, so each language has its own default set.
+export const defaultBoard = (lang) => (lang === "en" ? EN_BOARD : DEFAULT_BOARD);
 
-// Reads the list under a "## Issue 狀態" heading, one label per item with an optional #color, up to the next heading.
+// Reads the list under a "## Issue 狀態" or "## Issue status" heading, one label per item with an optional #color, up to the next heading.
 export const parseBoard = (markdown) => {
   const lines = (markdown ?? "").split("\n");
-  const start = lines.findIndex((l) => /^#{1,6}\s*issue\s*狀態\s*$/i.test(l.trim()));
+  const start = lines.findIndex((l) => /^#{1,6}\s*issue\s*(?:狀態|status)\s*$/i.test(l.trim()));
   if (start < 0) return undefined;
   const entries = [];
   for (const line of lines.slice(start + 1)) {
@@ -50,15 +56,15 @@ export const listArgs = (provider, tab) =>
 export const viewCommand = (provider, id) =>
   provider === "github" ? `gh issue view ${id} --json title,body,labels,comments` : `glab issue view ${id} --comments`;
 
-// Both CLIs' JSON as { iid, title, labels, url, updatedAt }. Throws "無法解析輸出" on anything else.
+// Both CLIs' JSON as { iid, title, labels, url, updatedAt }. Throws Error("unparsable") on anything else.
 export const parseIssues = (provider, stdout) => {
   let data;
   try {
     data = JSON.parse(stdout);
   } catch {
-    throw new Error("無法解析輸出");
+    throw new Error("unparsable");
   }
-  if (!Array.isArray(data)) throw new Error("無法解析輸出");
+  if (!Array.isArray(data)) throw new Error("unparsable");
   return provider === "github"
     ? data.map((i) => ({ iid: i.number, title: i.title, labels: (i.labels ?? []).map((l) => l.name), url: i.url, updatedAt: i.updatedAt }))
     : data.map((i) => ({ iid: i.iid, title: i.title, labels: i.labels ?? [], url: i.web_url, updatedAt: i.updated_at }));
@@ -87,10 +93,10 @@ export const groupsFor = (tab, issues, board = DEFAULT_BOARD) =>
     ? groupByStatus(issues, board)
     : issues.length > 0 ? [[CLOSED_GROUP, [...issues].sort((x, y) => y.iid - x.iid)]] : [];
 
-export const summarize = (issues, board = DEFAULT_BOARD) =>
+export const summarize = (issues, board = DEFAULT_BOARD, lang = "zh-TW") =>
   groupByStatus(issues, board)
     .filter(([s]) => s !== board.done)
-    .map(([s, list]) => `${s} ${list.length}`)
+    .map(([s, list]) => `${groupName(s, lang)} ${list.length}`)
     .join(" · ");
 
 export const toggle = (list, status) => (list.includes(status) ? list.filter((s) => s !== status) : [...list, status]);
@@ -129,8 +135,8 @@ export const sessionName = (issue) => {
 };
 
 // The new session's first message: read the issue and its comments with the CLI, summarise, then wait.
-export const initialPrompt = (provider, issue) =>
-  `請先用 \`${viewCommand(provider, issue.iid)}\` 讀取 issue #${issue.iid} 的內容與留言，摘要需求、驗收條件與待釐清的地方。摘要完先停下來等我指示，不要開始改程式碼。`;
+export const initialPrompt = (provider, issue, lang = "zh-TW") =>
+  t(lang, "prompt", { view: viewCommand(provider, issue.iid), id: issue.iid });
 
 export const openUrlCommand = (platform, url) => (platform === "macos" ? ["open", [url]] : ["xdg-open", [url]]);
 

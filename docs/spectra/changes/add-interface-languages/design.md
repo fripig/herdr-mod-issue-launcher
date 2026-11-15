@@ -28,8 +28,7 @@ Functions that produce text take the language:
 - `defaultBoard(lang)` replaces the `DEFAULT_BOARD` constant.
 - `parseIssues` throws a fixed code (`"unparsable"`). `main.js` maps the code to the localized text.
 - `initialPrompt(provider, issue, lang)`.
-- `groupsFor` takes the closed-group name.
-- The no-status group name comes from `noStatus(lang)`.
+- The "no status" and "closed" groups keep fixed keys (`NO_STATUS`, `CLOSED_GROUP`), which the collapsed set stores. `groupName(key, lang)` shows them in the interface language, and `summarize` takes `lang`. This way, switching language doesn't reset collapsed groups.
 
 Grouping still compares labels exactly, so only the displayed names change.
 
@@ -51,7 +50,7 @@ At init each panel copy runs detection and caches the result:
 
 **Interfaces.**
 - `i18n.js`: `STRINGS`, `pickLanguage(value) -> "en" | "zh-TW"`, `t(lang, key, params?)`.
-- `logic.js`: `defaultBoard(lang)`, `noStatus(lang)`, `parseBoard(markdown)` (also accepts `Issue status`), `initialPrompt(provider, issue, lang)`.
+- `logic.js`: `defaultBoard(lang)`, `groupName(key, lang)`, `summarize(issues, board, lang)`, `parseBoard(markdown)` (also accepts `Issue status`), `initialPrompt(provider, issue, lang)`.
 - Shared key: `issue-launcher.lang`.
 
 **Failure modes.**

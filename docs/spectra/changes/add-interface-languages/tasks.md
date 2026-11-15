@@ -1,10 +1,10 @@
 ## 1. Dictionary
 
-- [ ] 1.1 Add `mods/issue-launcher/i18n.js` (Dictionary module) with `STRINGS` for `en` and `zh-TW`, `pickLanguage` and `t`, covering every interface string now in `main.js` and `logic.js`. Verify: `node --test test/` passes a new `test/i18n.test.js` asserting every row of the "detection" example, key parity between the two languages, and placeholder substitution.
+- [x] 1.1 Add `mods/issue-launcher/i18n.js` (Dictionary module) with `STRINGS` for `en` and `zh-TW`, `pickLanguage` and `t`, covering every interface string now in `main.js` and `logic.js`. Verify: `node --test test/` passes a new `test/i18n.test.js` asserting every row of the "detection" example, key parity between the two languages, and placeholder substitution.
 
 ## 2. Language-aware logic
 
-- [ ] 2.1 [after: 1.1] Pass the language as a parameter to logic.js: `defaultBoard(lang)`, `noStatus(lang)`, `initialPrompt(provider, issue, lang)`, the closed-group name in `groupsFor`, the `"unparsable"` error code, and `parseBoard` accepting `Issue status` (Status board from CLAUDE.md). Verify: `node --test test/` passes, with the existing zh-TW expectations unchanged plus tests for the English heading, both default boards, and the English first message containing `gh issue view 15 --json title,body,labels,comments`.
+- [x] 2.1 [after: 1.1] Pass the language as a parameter to logic.js: `defaultBoard(lang)`, `groupName(key, lang)` for the no-status and closed groups (keys unchanged), `summarize(…, lang)`, `initialPrompt(provider, issue, lang)`, the `"unparsable"` error code, and `parseBoard` accepting `Issue status` (Status board from CLAUDE.md). Verify: `node --test test/` passes, with the existing zh-TW expectations unchanged plus tests for the English heading, both default boards, and the English first message containing `gh issue view 15 --json title,body,labels,comments`.
 
 ## 3. Interface language in the panel
 

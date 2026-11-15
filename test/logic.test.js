@@ -59,8 +59,8 @@ test("parses both providers' JSON and rejects junk", () => {
     [{ iid: 3, title: "a", labels: ["進行中"], url: "w", updatedAt: "d" }]);
   assert.deepEqual(parseIssues("github", JSON.stringify([{ number: 4, title: "b", labels: [{ name: "討論中" }], url: "w", updatedAt: "d" }])),
     [{ iid: 4, title: "b", labels: ["討論中"], url: "w", updatedAt: "d" }]);
-  assert.throws(() => parseIssues("github", "not json"), /無法解析輸出/);
-  assert.throws(() => parseIssues("gitlab", "{}"), /無法解析輸出/);
+  assert.throws(() => parseIssues("github", "not json"), /^Error: unparsable$/);
+  assert.throws(() => parseIssues("gitlab", "{}"), /^Error: unparsable$/);
 });
 
 test("others list excludes my issues", () => {
@@ -261,4 +261,35 @@ test("mod.json overlay matches the pop-out window", async () => {
   const json = JSON.parse(await readFile(new URL("../mods/issue-launcher/mod.json", import.meta.url), "utf8"));
   const { mod: _m, ...spec } = mod.WINDOW;
   assert.deepEqual(json.overlay, spec);
+});
+
+// add-interface-languages
+
+test("English board heading", () => {
+  const board = parseBoard("## Issue status\n\n- Doing\n- Done\n");
+  assert.deepEqual(board.statuses, ["Doing", "Done"]);
+  assert.equal(board.done, "Done");
+  assert.deepEqual(parseBoard("### ISSUE STATUS\n- a\n- b\n").statuses, ["a", "b"]);
+});
+
+test("default board per language", () => {
+  assert.deepEqual(mod.defaultBoard("en").statuses, ["In progress", "In review", "Ready", "Discussion", "Done"]);
+  assert.equal(mod.defaultBoard("en").done, "Done");
+  assert.deepEqual(mod.defaultBoard("zh-TW"), DEFAULT_BOARD);
+});
+
+test("group and summary names follow the language, keys stay", () => {
+  assert.equal(mod.groupName(NO_STATUS, "en"), "(No status)");
+  assert.equal(mod.groupName(CLOSED_GROUP, "en"), "Closed");
+  assert.equal(mod.groupName("進行中", "en"), "進行中");
+  assert.equal(mod.groupName(NO_STATUS, "zh-TW"), "（無狀態）");
+  const issues = [raw(1, ["In progress"]), raw(2)].map((r) => toIssue(r, mod.defaultBoard("en")));
+  assert.equal(summarize(issues, mod.defaultBoard("en"), "en"), "In progress 1 · (No status) 1");
+});
+
+test("English first message", () => {
+  const p = initialPrompt("github", raw(15, [], "Export CSV"), "en");
+  assert.ok(p.includes("gh issue view 15 --json title,body,labels,comments"));
+  assert.ok(p.includes("#15"));
+  assert.ok(p.startsWith("First read"));
 });
