@@ -2,6 +2,8 @@
 
 Herdr 桌面版（herdr-app）的 mod：在浮動視窗列出目前 space 所在 repo 的 GitLab／GitHub issue，依 board 狀態 label 分組，並對到 Herdr 裡正在處理該 issue 的 agent，一鍵切換或開新 Claude session。
 
+從零重建的說明（給其他 agent 照著做）見 [RECIPE.md](RECIPE.md)，也列在 [herdr.dev/mods](https://herdr.dev/mods)。
+
 由 Claude Code mod [gl-issues](https://github.com/fripig/claude-mod-gl-issues) 改寫而來：不再綁在單一 Claude session 的目錄，而是跟著 Herdr 目前的 space 走，session 對應改用 Herdr 的即時資料（`agents()`、`panes()`、`terminals()`），開 session 用一個 `tab.new` 指令完成。
 
 ```
