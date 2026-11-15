@@ -4,11 +4,11 @@
 
 ## 2. Pure logic module with node tests
 
-- [ ] 2.1 [after: 1.1] In `logic.js`, implement the status board from CLAUDE.md (`makeBoard`, `parseBoard`, `DEFAULT_BOARD`) and provider detection from the origin remote (`detectProvider`). Verify: `node --test test/` passes tests covering the "Custom board with a color", "No board section" scenarios and the origin URLs example table.
-- [ ] 2.2 [after: 2.1] Implement the three issue lists data side: `listArgs(provider, tab)`, `parseIssues` for both JSON shapes, `othersOf`, `viewCommand`. Verify: tests assert every row of the "commands" example table and the "Others list excludes my issues" scenario.
-- [ ] 2.3 [after: 2.2] Implement grouping by status (`toIssue`, `groupsFor` including the 已關閉 single group sorted descending, `summarize`) and `toggle` for collapsible groups. Verify: tests for "Issues land in board order", closed-tab ordering, and a summary string like "進行中 2 · 討論中 5" that excludes the done status.
-- [ ] 2.4 [after: 2.3] Implement agent matching from live herdr data on the logic side to match agents to issues: `extractMentions`, `sameProject`, `matchSessions` (sorted by mention count). Verify: tests assert every row of the "extraction" example table and the "Agent in another repository" scenario.
-- [ ] 2.5 [after: 2.4] Implement `sessionName` (40-character cut with `…`), `initialPrompt(provider, issue)` and `openUrlCommand(platform, url)`. Verify: tests show the tab name for issue #15 "匯出報表 CSV" is "#15 匯出報表 CSV", a 50-character title is cut to 40 characters, and the GitHub prompt contains `gh issue view 15 --json title,body,labels,comments`.
+- [x] 2.1 [after: 1.1] In `logic.js`, implement the status board from CLAUDE.md (`makeBoard`, `parseBoard`, `DEFAULT_BOARD`) and provider detection from the origin remote (`detectProvider`). Verify: `node --test test/` passes tests covering the "Custom board with a color", "No board section" scenarios and the origin URLs example table.
+- [x] 2.2 [after: 2.1] Implement the three issue lists data side: `listArgs(provider, tab)`, `parseIssues` for both JSON shapes, `othersOf`, `viewCommand`. Verify: tests assert every row of the "commands" example table and the "Others list excludes my issues" scenario.
+- [x] 2.3 [after: 2.2] Implement grouping by status (`toIssue`, `groupsFor` including the 已關閉 single group sorted descending, `summarize`) and `toggle` for collapsible groups. Verify: tests for "Issues land in board order", closed-tab ordering, and a summary string like "進行中 2 · 討論中 5" that excludes the done status.
+- [x] 2.4 [after: 2.3] Implement agent matching from live herdr data on the logic side to match agents to issues: `extractMentions`, `sameProject`, `matchSessions` (sorted by mention count). Verify: tests assert every row of the "extraction" example table and the "Agent in another repository" scenario.
+- [x] 2.5 [after: 2.4] Implement `sessionName` (40-character cut with `…`), `initialPrompt(provider, issue)` and `openUrlCommand(platform, url)`. Verify: tests show the tab name for issue #15 "匯出報表 CSV" is "#15 匯出報表 CSV", a 50-character title is cut to 40 characters, and the GitHub prompt contains `gh issue view 15 --json title,body,labels,comments`.
 
 ## 3. Panel follows the active project
 
