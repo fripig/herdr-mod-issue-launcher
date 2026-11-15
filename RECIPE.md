@@ -84,12 +84,13 @@ Status colors come from the board (see below). Default palette in order: `#4ade8
   - `run("tab.new", { name, space, folder, argv, task })`.
   - `run("agent.focus", { terminal })`.
   - `notify`, `openOverlay`, `closeOverlay`.
-  - The button reads `layout()` for `panel.hidden` and `panel-body.active`, runs `layout.select` / `layout.show` / `layout.hide`, and calls `setShared("workspace.panels", …)`.
+  - The button takes `panel-body.active` from `layout()`. On click it runs `layout.toggle {id: "panel"}` when the active child is `issues`, otherwise `layout.select` plus `layout.show`. For the highlight it reads the panel's shown/hidden click from `layouts/.state/<shared("layout")>.json` twice a second. It also calls `setShared("workspace.panels", …)`.
 - **State:** the fetched lists live on the View instance. `localStorage` keys `tab` and `collapsed` hold the per-copy choices.
 - **Programs it runs:** `git`, `gh` or `glab` (the network goes through them), `claude` in the new tab, and `open` or `xdg-open`. It reads only `CLAUDE.md` and `.claude/CLAUDE.md` inside the repo.
 
 ## Watch out
 
+- **`layout()` doesn't report the panel's shown/hidden clicks** (Herdr app 0.1.15). It keeps the layout file's `"hidden": true` even while the panel is open; only the stack's `active` child is live. A button that decides show versus hide from `layout().…panel.hidden` therefore always shows, and never closes. Toggle instead, and read `layouts/.state/` for the highlight. That file is Herdr's own, so treat it as read-only and as liable to change.
 - **The layout is a snapshot of `main` from Herdr app 0.1.15.** Herdr's later changes to `main` don't reach it. Re-copy `main.json` and re-apply the two changes.
 - **The gap between Changes and Issues is about 7px wider** than the gap between Files and Changes, because the shipped tab bar has 10px right padding. Avoiding it means copying the shipped `tabs` mod.
 - **`place: "right"` did not dock the mod** into the shipped `main` layout on Herdr as of 2026-11-15. That held after a restart and after switching layouts, which is why it is a window. If docking works on your Herdr, a side block is fine too.
