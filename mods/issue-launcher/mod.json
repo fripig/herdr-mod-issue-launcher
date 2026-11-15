@@ -1,0 +1,5 @@
+{
+  "place": "none",
+  "title": "Issues",
+  "overlay": { "kind": "window", "key": "issue-launcher", "keep": true, "width": 380, "height": 0.8 }
+}

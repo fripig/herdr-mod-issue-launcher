@@ -4,7 +4,7 @@ The gl-issues Claude Code mod (in the sibling repo claude-mod-gl-issues) lists m
 
 ## What Changes
 
-- Add a herdr-app mod `issue-launcher` (gpui-kit JavaScript) in this repo at `mods/issue-launcher/`, installed by symlinking it into `~/.config/herdr-app/mods/issue-launcher`.
+- Add a herdr-app mod `issue-launcher` (gpui-kit JavaScript) in this repo at `mods/issue-launcher/`, installed by `scripts/install.sh`, which makes `~/.config/herdr-app/mods/issue-launcher` a real folder whose files are symlinks into this repo. The panel opens as a floating Herdr window with `mod.open`.
 - The panel shows the active project's issues in three tabs (assigned to me, others' open issues, my closed issues), grouped by status labels read from the project's `CLAUDE.md` `## Issue 狀態` section, with the same default label list and colors as gl-issues.
 - It picks `gh` for repos whose `origin` points at github.com and `glab` otherwise, run through herdr's `exec` in the user's real environment.
 - Under each issue it lists the herdr agents already working on it (matched from tab name, terminal title, working folder and launch arguments) with their status; clicking one focuses that agent.
@@ -30,5 +30,5 @@ Recorded in design.md.
 ## Impact
 
 - New files: mods/issue-launcher/main.js, mods/issue-launcher/mod.json, supporting modules under mods/issue-launcher/, a README.md, and unit tests for the pure logic.
-- Local setup: one symlink in ~/.config/herdr-app/mods/; the person's layouts and keys.json are not edited.
+- Local setup: one folder of file symlinks in ~/.config/herdr-app/mods/issue-launcher/; the person's layouts and keys.json are not edited.
 - Runtime dependencies on the user's machine: herdr-app, `git`, and `gh` or `glab` logged in; `open` (macOS) or `xdg-open` to open issue pages. No network calls from the mod itself beyond those CLIs.

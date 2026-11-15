@@ -1,6 +1,6 @@
 ## 1. Scaffold and install by symlink
 
-- [ ] 1.1 Create `mods/issue-launcher/` with `mod.json` `{ "place": "right", "size": 360 }` (Dock on the right through mod.json) and a minimal `main.js` View that renders "讀取中…"; add `package.json` with only `"type": "module"` and `"test": "node --test test/"`. Install by symlink: `ln -s` the folder to `~/.config/herdr-app/mods/issue-launcher`. Verify: `herdr-app check ~/.config/herdr-app/mods/issue-launcher` prints `check passed` and `herdr-app status` shows no errors.
+- [x] 1.1 Create `mods/issue-launcher/` with the window `mod.json` (Floating window opened with mod.open) and a minimal `main.js` View that renders "讀取中…"; add `package.json` with only `"type": "module"` and `"test": "node --test test/"`; add `scripts/install.sh` to install by symlink (real folder, one symlink per file, refuses to replace anything else). Verify: `scripts/install.sh` run twice succeeds, `herdr-app check ~/.config/herdr-app/mods/issue-launcher` prints `check passed`, and `herdr-app do mod.open --name issue-launcher` lists `issue-launcher` in `herdr-app status` overlays with no errors.
 
 ## 2. Pure logic module with node tests
 
@@ -16,7 +16,7 @@
 
 ## 4. Panel UI
 
-- [ ] 4.1 [after: 3.1] Render the header, the tab row with counts, status groups with board colors and dimmed done status, collapsible groups with ▾/▸ and 全部收合/全部展開, and the empty-list texts; persist tab and collapsed set in `localStorage` (State and refresh). Verify: `herdr-app check` passes; `herdr-app shot` shows the header, tabs and groups; toggling a group and reloading the mod (save `main.js`) keeps it collapsed.
+- [ ] 4.1 [after: 3.1] Render the title row with a ✕ button that closes the window via `closeOverlay(props().overlay)`, the header, the tab row with counts, status groups with board colors and dimmed done status, collapsible groups with ▾/▸ and 全部收合/全部展開, and the empty-list texts; persist tab and collapsed set in `localStorage` (State and refresh). Verify: `herdr-app check` passes; `herdr-app shot` shows the header, tabs and groups; toggling a group and reloading the mod (save `main.js`) keeps it collapsed.
 
 ## 5. Sessions
 
@@ -26,4 +26,4 @@
 
 ## 6. Documentation
 
-- [ ] 6.1 [after: 5.3] Write `README.md` in Traditional Chinese: what the panel shows, requirements (herdr-app, git, gh/glab logged in), the symlink install command, the `## Issue 狀態` board format, and how to run `node --test test/` and `herdr-app check`; state that this is a native herdr-app mod instead of extending gl-issues and what was left out (Non-Goals). Verify: content review that every command in it runs as written.
+- [ ] 6.1 [after: 5.3] Write `README.md` in Traditional Chinese: what the panel shows, requirements (herdr-app, git, gh/glab logged in), the `scripts/install.sh` install and `herdr-app do mod.open --name issue-launcher`, the `## Issue 狀態` board format, and how to run `node --test test/` and `herdr-app check`; state that this is a native herdr-app mod instead of extending gl-issues and what was left out (Non-Goals). Verify: content review that every command in it runs as written.

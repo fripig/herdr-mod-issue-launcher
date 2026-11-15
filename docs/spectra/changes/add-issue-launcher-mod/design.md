@@ -16,7 +16,7 @@ The Herdr desktop app (herdr-app) loads mods from `~/.config/herdr-app/mods/<nam
 **Goals:**
 
 - Feature parity with gl-issues for listing, grouping, the three tabs, session matching, focusing, starting a session and opening the issue page (specs `issue-panel`, `issue-sessions`).
-- A docked side panel that follows the active space.
+- A floating panel window that follows the active space and reopens on the next start.
 - Pure logic covered by unit tests that run with plain Node, no installs.
 
 **Non-Goals:**
@@ -53,17 +53,19 @@ For each agent in `agents()`, take the pane's `cwd` from `panes()` (fallback: th
 
 Fetched issue lists, board, provider, errors and fetch time live on the View instance. The selected tab and collapsed groups are kept in `localStorage` keys `tab` and `collapsed` (JSON, wrapped in try/catch). One fetch at a time (`this.loading`); a 5-minute `cx.timer.every`, a 1-second timer that only compares the project key and triggers a fetch when it changed, the refresh button, and start-up. 我的 failing keeps previous lists; 其他 / 已關閉 failures are stored per tab.
 
-### Dock on the right through mod.json
+### Floating window opened with mod.open
 
-`mod.json` is `{ "place": "right", "size": 360 }`, so the first time herdr-app sees the folder it docks one copy into the shown layout. The person can move or hide it with the layout afterwards.
+`mod.json` is `{ "place": "none", "title": "Issues", "overlay": { "kind": "window", "key": "issue-launcher", "keep": true, "width": 380, "height": 0.8 } }`. `herdr-app do mod.open --name issue-launcher` (or the command palette) opens it as a draggable window that Herdr remembers in `windows.json` and reopens on the next start. A window does not close on Esc, so the panel draws a title row with a close button that calls `closeOverlay(props().overlay)`.
+
+Rejected: `{ "place": "right" }` docking. Measured on Herdr 2026-11-15: neither this mod (symlinked folder, then a real folder) nor a throwaway real-folder test mod was docked into the `main` layout or recorded in `seen.json`, after an app restart, after re-showing `main`, or after switching to `terminals` and back. The trigger for docking is undocumented, so the design does not depend on it. Rejected: cloning `main` and the shipped `tabs` mod to add a third panel button, because it forks shipped files.
 
 ### Install by symlink
 
-The source of truth is this repo's `mods/issue-launcher/`; `~/.config/herdr-app/mods/issue-launcher` is a symlink to it, so saving in the repo hot-reloads the panel. A `README.md` documents the symlink command and requirements.
+The source of truth is this repo's `mods/issue-launcher/`. `scripts/install.sh` creates `~/.config/herdr-app/mods/issue-launcher/` as a real folder (refusing to overwrite anything that is not a folder of symlinks into this repo) and symlinks every file of `mods/issue-launcher/` into it; it is re-run after adding a file. Saving a file in the repo does not hot-reload the mod, because herdr-app watches the install folder and the links themselves do not change (measured 2026-11-15); re-running `scripts/install.sh` recreates the links and does reload it, so it is also the reload step during development. Measured 2026-11-15: a symlinked mod folder loads with `mod.open` and `herdr-app check`; a real folder of file symlinks does too. Neither was recorded in `seen.json`, so the real folder is a precaution matching how shipped and installed mods are laid out, not a proven requirement. A `README.md` documents the script and requirements.
 
 ## Implementation Contract
 
-**Behavior.** A panel titled by provider ("GitLab issues" / "GitHub issues") on the right of the Herdr window shows, top to bottom: a header line ("更新於 HH:MM:SS", 重新整理 button, 全部收合/全部展開 button, the status summary), the tab row (我的（n）, 其他（n）, 已關閉（n）), error or empty lines, then status groups with ▾/▸ arrows; each issue row is `[#id] [▶] title`, followed by one `↪ <mark> <name>` line per matched agent. Colors come from `theme()` except status colors from the board. All visible text is Traditional Chinese as in gl-issues.
+**Behavior.** A panel titled by provider ("GitLab issues" / "GitHub issues") in a floating Herdr window shows, top to bottom: a title row (provider name and a ✕ close button), a header line ("更新於 HH:MM:SS", 重新整理 button, 全部收合/全部展開 button, the status summary), the tab row (我的（n）, 其他（n）, 已關閉（n）), error or empty lines, then status groups with ▾/▸ arrows; each issue row is `[#id] [▶] title`, followed by one `↪ <mark> <name>` line per matched agent. Colors come from `theme()` except status colors from the board. All visible text is Traditional Chinese as in gl-issues.
 
 **Interfaces.**
 
@@ -79,12 +81,12 @@ The source of truth is this repo's `mods/issue-launcher/`; `~/.config/herdr-app/
 - `herdr-app check ~/.config/herdr-app/mods/issue-launcher` prints `check passed`.
 - Manual in the running app on a GitHub repo (this person's repos, e.g. claude-mod-gl-issues) and a GitLab repo: list and grouping match `gh`/`glab` output, ▶ opens a tab whose Claude summarises the issue, the new session appears under the issue, clicking it focuses it, `#id` opens the browser, switching spaces switches projects.
 
-**Scope.** In: files under `mods/issue-launcher/`, `test/`, `README.md`, `package.json` (only `"type": "module"` and a `test` script), the symlink. Out: everything listed in Non-Goals, changes to shipped mods, layouts or keys.json.
+**Scope.** In: files under `mods/issue-launcher/`, `test/`, `README.md`, `package.json` (only `"type": "module"` and a `test` script), `scripts/install.sh`. Out: everything listed in Non-Goals, changes to shipped mods, layouts or keys.json.
 
 ## Risks / Trade-offs
 
 - [The claim that `tab.new`'s `argv` finds `claude` on PATH and that `task` is typed once Claude is ready comes from herdr.d.ts, not a test] → the manual check of ▶ verifies it; if `task` is not delivered, fall back to `hc send <terminal>` after the agent reports idle, recorded as a follow-up.
 - [`agents()` only lists terminals that report status (OSC 7501); a plain shell in an issue worktree is not matched] → same as gl-issues, which only matched Claude agents.
 - [Issue numbers in unrelated tab names (e.g. "#1") give false matches] → matching is limited to the same project, as in gl-issues.
-- [Per-copy `localStorage` means two copies of the panel keep separate tab and collapse state] → acceptable; one copy is docked by default.
+- [Per-copy `localStorage` means two copies of the panel keep separate tab and collapse state] → acceptable; one window copy is opened by `mod.open`.
 - [100-issue limit per list] → same as gl-issues; large projects see the first 100.

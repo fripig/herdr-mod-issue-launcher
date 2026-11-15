@@ -1,2 +1,6 @@
 # Spectra app data
 .spectra/
+
+# herdr-app writes these into every mod folder
+mods/*/jsconfig.json
+mods/*/*.d.ts
