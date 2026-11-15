@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, focused, agents, terminals, exec, readTextFile, run, notify, theme, props, closeOverlay, layout, shared, setShared, window as appWindow } from "herdr";
+import { spaces, panes, focused, agents, terminals, exec, readTextFile, run, notify, theme, props, openOverlay, closeOverlay, layout, shared, setShared, window as appWindow } from "herdr";
 import * as L from "./logic.js";
 
 const REFRESH_MS = 5 * 60 * 1000;
@@ -233,11 +233,18 @@ export default class IssueLauncher extends View {
         .child(label);
 
     const overlay = props()?.overlay;
+    const runAll = (commands) => { for (const [name, args] of commands) run(name, args); };
+    const icon = (id, label, onPress) =>
+      div().id(id).px(4).rounded(4).cursor_pointer().text_color(t.muted).hover((s) => s.bg(t.hover))
+        .on_mouse_down("left", stop).on_click(onPress).child(label);
     const title = h_flex().h(30).px(10).flex_none().items_center().justify_between().bg(t.chrome).border_b(1).border_color(t.border)
       .child(div().font_semibold().text_color(t.foreground).child(provider ? `${L.PROVIDERS[provider].name} issues` : "Issues"))
-      .when(Boolean(overlay), (el) => el.child(
-        div().id("close").px(4).rounded(4).cursor_pointer().text_color(t.muted).hover((s) => s.bg(t.hover))
-          .on_mouse_down("left", stop).on_click(() => closeOverlay(overlay)).child("✕")));
+      .child(h_flex().gap(2)
+        // Docked: pop out into the floating window.
+        .when(!overlay, (el) => el.child(icon("pop-out", "⧉", () => { runAll(L.popOutCommands()); openOverlay(L.WINDOW); })))
+        // Floating: dock back when this layout has the Issues panel, and close.
+        .when(Boolean(overlay) && L.canDock(find(layout(), "panel-body")), (el) => el.child(icon("dock-back", "⇲", () => { runAll(L.dockBackCommands()); closeOverlay(overlay); })))
+        .when(Boolean(overlay), (el) => el.child(icon("close", "✕", () => closeOverlay(overlay)))));
 
     const header = v_flex().gap(4).flex_none()
       .child(h_flex().gap(6).items_center()

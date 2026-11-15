@@ -8,11 +8,15 @@
 
 ## 3. Issues button in the tab bar
 
-- [ ] 3.1 [after: 1.1] Issues button in the tab bar: in `main.js`, make `props().role === "button"` skip fetch timers, draw the Issues button with `issues.svg` styled like the Files/Changes buttons and highlighted while on, run `panelToggle` on click, and ensure `workspace.panels` contains `issues` on start (Issues panel kept per space). The docked panel keeps a title row with the ✕ only in a floating window (Close button only in a window). Verify: `herdr-app check` passes; after `scripts/install.sh` and `herdr-app do layout.switch --name issue-launcher`, a screenshot taken while Herdr redraws shows the Issues button beside Files and Changes, and `shared.json` lists `issues` in `workspace.panels`.
+- [x] 3.1 [after: 1.1] Issues button in the tab bar: in `main.js`, make `props().role === "button"` skip fetch timers, draw the Issues button with `issues.svg` styled like the Files/Changes buttons and highlighted while on, run `panelToggle` on click, and ensure `workspace.panels` contains `issues` on start (Issues panel kept per space). The docked panel keeps a title row with the ✕ only in a floating window (Close button only in a window). Verify: `herdr-app check` passes; after `scripts/install.sh` and `herdr-app do layout.switch --name issue-launcher`, a screenshot taken while Herdr redraws shows the Issues button beside Files and Changes, and `shared.json` lists `issues` in `workspace.panels`.
+
+## 3b. Pop out and dock back
+
+- [ ] 3.2 [after: 3.1] Pop out and dock back: the docked panel's title row gets a ⧉ button that hides the right panel and opens the floating window with `openOverlay` (same spec as `mod.json`, so an open window stays open); the floating window gets a ⇲ button, shown only when the layout's `panel-body` has an `issues` child, that closes the window and shows the Issues panel. The command lists live in `logic.js`. Verify: `node --test test/` covers the pop-out and dock-back command lists and the ⇲ visibility check; `herdr-app check` passes; the person confirms ⧉ and ⇲ in the app.
 
 ## 4. Check in the app
 
-- [ ] 4.1 [after: 2.1, 3.1] Adjust the `issues-button` width so the button fits without clipping or a large gap, then have the person confirm: the Issues button toggles the panel as in the "button clicks" table, Files and Changes still toggle, a space that showed Issues shows it again after switching spaces, and `mod.open` still opens the floating window with ✕. Verify: the person's confirmation is recorded in the commit message.
+- [ ] 4.1 [after: 2.1, 3.2] Adjust the `issues-button` width so the button fits without clipping or a large gap, then have the person confirm: the Issues button toggles the panel as in the "button clicks" table, Files and Changes still toggle, a space that showed Issues shows it again after switching spaces, and `mod.open` still opens the floating window with ✕. Verify: the person's confirmation is recorded in the commit message.
 
 ## 5. Documentation
 

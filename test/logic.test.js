@@ -236,3 +236,20 @@ test("button clicks", () => {
   assert.equal(mod.panelOn(false, "issues"), true);
   assert.equal(mod.panelOn(true, "issues"), false);
 });
+
+test("pop out and dock back", () => {
+  assert.deepEqual(mod.WINDOW, { mod: "issue-launcher", kind: "window", key: "issue-launcher", keep: true, width: 380, height: 0.8 });
+  assert.deepEqual(mod.popOutCommands(), [["layout.hide", { id: "panel" }]]);
+  assert.deepEqual(mod.dockBackCommands(), [["layout.select", { stack: "panel-body", child: "issues" }], ["layout.show", { id: "panel" }]]);
+  const files = { id: "files" }, issues = { id: "issues" };
+  assert.equal(mod.canDock({ id: "panel-body", children: [files, issues] }), true);
+  assert.equal(mod.canDock({ id: "panel-body", children: [files] }), false);
+  assert.equal(mod.canDock(null), false);
+});
+
+test("mod.json overlay matches the pop-out window", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const json = JSON.parse(await readFile(new URL("../mods/issue-launcher/mod.json", import.meta.url), "utf8"));
+  const { mod: _m, ...spec } = mod.WINDOW;
+  assert.deepEqual(json.overlay, spec);
+});

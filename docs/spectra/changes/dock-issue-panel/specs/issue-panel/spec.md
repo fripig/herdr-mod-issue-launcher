@@ -48,3 +48,22 @@ The `issue-launcher` mod SHALL ensure the shared value `workspace.panels` contai
 | files, changes | files, changes, issues |
 | (empty list) | issues |
 | files, changes, issues | unchanged |
+
+### Requirement: Pop out and dock back
+
+The docked issue panel SHALL show a ⧉ button in its title row. Clicking it SHALL hide the right panel and open the issue panel as the floating window (`kind: "window"`, key `issue-launcher`, kept, 380px wide, 80% high), opening it when absent and leaving an already open window open. The floating window SHALL show a ⇲ button next to ✕ only when the shown layout has an `issues` child in `panel-body`. Clicking ⇲ SHALL close the window, select `issues` in `panel-body` and show the right panel.
+
+#### Scenario: Pop out
+
+- **WHEN** the person clicks ⧉ in the docked panel
+- **THEN** the right panel is hidden and the floating issue window is open
+
+#### Scenario: Dock back
+
+- **WHEN** the person clicks ⇲ in the floating window while the `issue-launcher` layout is shown
+- **THEN** the window closes and the right panel shows the issue panel
+
+#### Scenario: No dock in another layout
+
+- **WHEN** the floating window is open while Herdr's `main` layout is shown
+- **THEN** the window shows ✕ but no ⇲

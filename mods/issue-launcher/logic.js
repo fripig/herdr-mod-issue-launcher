@@ -189,3 +189,11 @@ export const panelToggle = (hidden, active) =>
   panelOn(hidden, active)
     ? [["layout.hide", { id: "panel" }]]
     : [["layout.select", { stack: "panel-body", child: "issues" }], ["layout.show", { id: "panel" }]];
+
+// The floating window, as mod.json describes it, for openOverlay (which replaces rather than toggles).
+export const WINDOW = { mod: "issue-launcher", kind: "window", key: "issue-launcher", keep: true, width: 380, height: 0.8 };
+// ⧉ hides the docked panel (then opens WINDOW); ⇲ shows the Issues panel (then closes the window).
+export const popOutCommands = () => [["layout.hide", { id: "panel" }]];
+export const dockBackCommands = () => [["layout.select", { stack: "panel-body", child: "issues" }], ["layout.show", { id: "panel" }]];
+// ⇲ only makes sense in a layout whose right panel has the issues block.
+export const canDock = (panelBody) => (panelBody?.children ?? []).some((c) => c.id === "issues");
