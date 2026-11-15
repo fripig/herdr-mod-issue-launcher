@@ -1,0 +1,135 @@
+// The issue launcher's pure logic. No herdr or gpui-kit imports, so `node --test` runs it.
+
+export const NO_STATUS = "（無狀態）";
+export const CLOSED_GROUP = "已關閉";
+// Colors, in order, for status labels that don't name one.
+export const PALETTE = ["#4ade80", "#facc15", "#22d3ee", "#c084fc", "#60a5fa", "#fb923c", "#f472b6"];
+
+// Labels in workflow order; the last one is the done status: no color, dimmed, collapsed at first.
+export const makeBoard = (entries) => {
+  const done = entries[entries.length - 1]?.name ?? "";
+  const colors = {};
+  let next = 0;
+  for (const e of entries.filter((e) => e.name !== done)) colors[e.name] = e.color ?? PALETTE[next++ % PALETTE.length];
+  return { statuses: entries.map((e) => e.name), colors, done };
+};
+
+export const DEFAULT_BOARD = makeBoard(
+  ["進行中", "檢驗中", "測試站待檢驗", "正式站待檢驗", "已上線待檢驗", "可處理", "討論中", "已完成"].map((name) => ({ name })),
+);
+
+// Reads the list under a "## Issue 狀態" heading, one label per item with an optional #color, up to the next heading.
+export const parseBoard = (markdown) => {
+  const lines = (markdown ?? "").split("\n");
+  const start = lines.findIndex((l) => /^#{1,6}\s*issue\s*狀態\s*$/i.test(l.trim()));
+  if (start < 0) return undefined;
+  const entries = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^#{1,6}\s/.test(line.trim())) break;
+    const m = /^\s*[-*+]\s+(.+?)(?:\s+(#[0-9a-f]{3}(?:[0-9a-f]{3})?))?\s*$/i.exec(line);
+    if (m?.[1]) entries.push(m[2] ? { name: m[1], color: m[2] } : { name: m[1] });
+  }
+  return entries.length > 0 ? makeBoard(entries) : undefined;
+};
+
+export const PROVIDERS = {
+  gitlab: { name: "GitLab", cli: "glab" },
+  github: { name: "GitHub", cli: "gh" },
+};
+
+// origin on github.com uses gh; everything else, self-hosted GitLab and no origin included, uses glab.
+export const detectProvider = (remoteUrl) => (/github\.com[:/]/i.test(remoteUrl ?? "") ? "github" : "gitlab");
+
+// tab: "mine" (open, assigned to me), "others" (every open issue), "closed" (closed, assigned to me).
+export const listArgs = (provider, tab) =>
+  provider === "github"
+    ? ["gh", "issue", "list", ...(tab === "others" ? [] : ["--assignee", "@me"]), "--state", tab === "closed" ? "closed" : "open", "--limit", "100", "--json", "number,title,labels,url,updatedAt"]
+    : ["glab", "issue", "list", ...(tab === "others" ? [] : ["--assignee=@me"]), ...(tab === "closed" ? ["--closed"] : []), "--per-page", "100", "--output", "json"];
+
+// gh issue view --comments queries the retired Projects (classic) and fails, so GitHub uses --json.
+export const viewCommand = (provider, id) =>
+  provider === "github" ? `gh issue view ${id} --json title,body,labels,comments` : `glab issue view ${id} --comments`;
+
+// Both CLIs' JSON as { iid, title, labels, url, updatedAt }. Throws "無法解析輸出" on anything else.
+export const parseIssues = (provider, stdout) => {
+  let data;
+  try {
+    data = JSON.parse(stdout);
+  } catch {
+    throw new Error("無法解析輸出");
+  }
+  if (!Array.isArray(data)) throw new Error("無法解析輸出");
+  return provider === "github"
+    ? data.map((i) => ({ iid: i.number, title: i.title, labels: (i.labels ?? []).map((l) => l.name), url: i.url, updatedAt: i.updatedAt }))
+    : data.map((i) => ({ iid: i.iid, title: i.title, labels: i.labels ?? [], url: i.web_url, updatedAt: i.updated_at }));
+};
+
+export const toIssue = (raw, board = DEFAULT_BOARD) => ({
+  ...raw,
+  status: raw.labels.find((l) => board.statuses.includes(l)) ?? NO_STATUS,
+  sessions: [],
+});
+
+// The others tab: the project's open issues minus mine.
+export const othersOf = (all, mine) => {
+  const mineIids = new Set(mine.map((i) => i.iid));
+  return all.filter((i) => !mineIids.has(i.iid));
+};
+
+export const groupByStatus = (issues, board = DEFAULT_BOARD) =>
+  [...board.statuses, NO_STATUS]
+    .map((s) => [s, issues.filter((i) => i.status === s).sort((x, y) => x.iid - y.iid)])
+    .filter(([, list]) => list.length > 0);
+
+// Closed issues mostly still carry the done label: one group, newest first.
+export const groupsFor = (tab, issues, board = DEFAULT_BOARD) =>
+  tab !== "closed"
+    ? groupByStatus(issues, board)
+    : issues.length > 0 ? [[CLOSED_GROUP, [...issues].sort((x, y) => y.iid - x.iid)]] : [];
+
+export const summarize = (issues, board = DEFAULT_BOARD) =>
+  groupByStatus(issues, board)
+    .filter(([s]) => s !== board.done)
+    .map(([s, list]) => `${s} ${list.length}`)
+    .join(" · ");
+
+export const toggle = (list, status) => (list.includes(status) ? list.filter((s) => s !== status) : [...list, status]);
+
+// Issue numbers after #, gl-, /issues/, /work_items/, "issue", "work item" or 票, with how often each appears.
+const MENTION = /(?:\/(?:work_items|issues)\/|\bgl-|#|(?:issue|work item|票) ?#?)(\d{1,5})\b/gi;
+export const extractMentions = (text) => {
+  const counts = new Map();
+  for (const m of (text ?? "").matchAll(MENTION)) {
+    const n = Number(m[1]);
+    counts.set(n, (counts.get(n) ?? 0) + 1);
+  }
+  return counts;
+};
+
+// Issue numbers only mean something inside one project: the agent's folder is the root, under it, or contains it.
+export const sameProject = (agentCwd, root) =>
+  !!agentCwd && !!root && (agentCwd === root || agentCwd.startsWith(`${root}/`) || root.startsWith(`${agentCwd}/`));
+
+// agents: [{ address, cwd, text, status, label }] already limited to this project.
+export const matchSessions = (issues, agents) => {
+  const mentions = agents.map((a) => ({ a, counts: extractMentions(a.text) }));
+  return issues.map((issue) => ({
+    ...issue,
+    sessions: mentions
+      .flatMap(({ a, counts }) => (counts.has(issue.iid) ? [{ address: a.address, status: a.status, label: a.label, count: counts.get(issue.iid) }] : []))
+      .sort((x, y) => y.count - x.count),
+  }));
+};
+
+export const STATUS_MARK = { working: "◑", blocked: "!", done: "✓", idle: "·" };
+
+export const sessionName = (issue) => {
+  const name = `#${issue.iid} ${issue.title}`;
+  return name.length > 40 ? `${name.slice(0, 39)}…` : name;
+};
+
+// The new session's first message: read the issue and its comments with the CLI, summarise, then wait.
+export const initialPrompt = (provider, issue) =>
+  `請先用 \`${viewCommand(provider, issue.iid)}\` 讀取 issue #${issue.iid} 的內容與留言，摘要需求、驗收條件與待釐清的地方。摘要完先停下來等我指示，不要開始改程式碼。`;
+
+export const openUrlCommand = (platform, url) => (platform === "macos" ? ["open", [url]] : ["xdg-open", [url]]);
