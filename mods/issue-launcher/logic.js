@@ -148,7 +148,8 @@ export const errorLine = (output) =>
 export const collapseShown = (collapsed, shown) => [...new Set([...collapsed, ...shown])];
 export const expandShown = (collapsed, shown) => collapsed.filter((s) => !shown.includes(s));
 
-export const emptyData = () => ({ mine: null, others: null, closed: null, board: DEFAULT_BOARD, fetchedAt: null, error: null, errors: {} });
+// board: null until CLAUDE.md is read and when it has none; the panel then uses defaultBoard(lang).
+export const emptyData = () => ({ mine: null, others: null, closed: null, board: null, fetchedAt: null, error: null, errors: {} });
 
 // What the panel shows after a fetch. Each result is { raws } or { error }.
 // A failed 我的 keeps every previous list; a failed 其他 or 已關閉 keeps that list and errors on its tab only.

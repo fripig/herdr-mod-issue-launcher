@@ -2,14 +2,26 @@ import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, focused, agents, terminals, exec, readTextFile, run, notify, theme, props, openOverlay, closeOverlay, layout, shared, setShared, appHome, window as appWindow } from "herdr";
 import * as L from "./logic.js";
+import { LANGUAGES, pickLanguage, firstAppleLanguage, t as tr } from "./i18n.js";
 
 const REFRESH_MS = 5 * 60 * 1000;
-const TABS = [["mine", "我的"], ["others", "其他"], ["closed", "已關閉"]];
-const EMPTY_TEXT = {
-  mine: "沒有指派給你的 open issue。",
-  others: "沒有其他人的 open issue。",
-  closed: "沒有指派給你的已關閉 issue。",
-};
+const TABS = [["mine", "tabMine", "emptyMine"], ["others", "tabOthers", "emptyOthers"], ["closed", "tabClosed", "emptyClosed"]];
+const LANG_KEY = "issue-launcher.lang";
+// "Label (3)" in English, "標籤（3）" with full-width parentheses in Chinese.
+const counted = (lang, label, n) => (lang === "en" ? `${label} (${n})` : `${label}（${n}）`);
+
+// The system language, asked once per panel copy: macOS AppleLanguages, else LANG.
+async function detectLanguage() {
+  try {
+    const res = appWindow()?.platform === "macos"
+      ? await exec("defaults", ["read", "-g", "AppleLanguages"], { timeout: 5000 })
+      : await exec("sh", ["-c", 'printf %s "$LANG"'], { timeout: 5000 });
+    if (res.code !== 0) return "en";
+    return pickLanguage(appWindow()?.platform === "macos" ? firstAppleLanguage(res.stdout) : res.stdout);
+  } catch {
+    return "en";
+  }
+}
 // The window drags on any press a control doesn't stop.
 const stop = (_e, cx) => cx.stop_propagation();
 const firstLine = L.errorLine;
@@ -64,6 +76,7 @@ function save(key, value) {
   }
 }
 
+// The board from CLAUDE.md, or null so render can use the interface language's default board.
 async function loadBoard(root, on) {
   for (const path of [`${root}/CLAUDE.md`, `${root}/.claude/CLAUDE.md`]) {
     try {
@@ -73,7 +86,7 @@ async function loadBoard(root, on) {
       // Unreadable: try the next one, then the default board.
     }
   }
-  return L.DEFAULT_BOARD;
+  return null;
 }
 
 const emptyData = L.emptyData;
@@ -108,6 +121,13 @@ export default class IssueLauncher extends View {
     this.queued = null; // null, or whether the queued refresh must refetch issues
     this.where = null;
     this.launching = new Set();
+    // The last detected language until this start's detection answers, so the panel doesn't flash English.
+    this.detected = load("detectedLang", "en");
+    cx.spawn(async (cx) => {
+      this.detected = await detectLanguage();
+      save("detectedLang", this.detected);
+      cx.notify();
+    });
     this.tab = load("tab", "mine");
     this.collapsed = load("collapsed", null);
     this.refresh(cx, true);
@@ -177,6 +197,12 @@ export default class IssueLauncher extends View {
     this.data = L.nextData(this.data, { mine, all, closed }, board, clock(new Date()));
   }
 
+  // The shared choice when set, else what the system says.
+  lang() {
+    const chosen = shared(LANG_KEY);
+    return LANGUAGES.includes(chosen) ? chosen : this.detected;
+  }
+
   // Agents in this project, as matchSessions takes them.
   agentsHere() {
     return L.agentInputs({ agents: agents(), panes: panes(), terminals: terminals(), spaces: spaces() }, this.project);
@@ -188,7 +214,7 @@ export default class IssueLauncher extends View {
     this.launching.add(issue.iid);
     const name = L.sessionName(issue);
     const space = spaces().find((s) => s.active);
-    run("tab.new", { name, space: space?.id, folder: project.root, argv: ["claude", "-n", name], task: L.initialPrompt(project.provider, issue) });
+    run("tab.new", { name, space: space?.id, folder: project.root, argv: ["claude", "-n", name], task: L.initialPrompt(project.provider, issue, this.lang()) });
     // run returns before the agent is up; ignore repeat clicks for a moment.
     cx.timer.after(3000, (cx) => {
       this.launching.delete(issue.iid);
@@ -204,7 +230,7 @@ export default class IssueLauncher extends View {
         const res = await exec(cmd, args, { timeout: 10000 });
         if (res.code !== 0) throw new Error(firstLine(res.stderr) || `exit ${res.code}`);
       } catch (err) {
-        notify({ level: "error", title: `開啟 issue 頁面失敗：${err?.message ?? String(err)}` });
+        notify({ level: "error", title: tr(this.lang(), "openFailed", { reason: err?.message ?? String(err) }) });
       }
     });
   }
@@ -236,9 +262,12 @@ export default class IssueLauncher extends View {
   render() {
     if (props()?.role === "button") return this.renderButton();
     const t = theme();
+    const lang = this.lang();
     const project = this.project;
     const data = this.data;
-    const board = data.board;
+    const board = data.board ?? L.defaultBoard(lang);
+    const say = (key, params) => tr(lang, key, params);
+    const reason = (message) => (message === "unparsable" ? say("unparsable") : message);
     const provider = project?.provider;
     const cli = provider ? L.PROVIDERS[provider].cli : "";
     const lists = { mine: data.mine, others: data.others, closed: data.closed };
@@ -248,7 +277,7 @@ export default class IssueLauncher extends View {
     const closedGroups = this.collapsed ?? [board.done];
     const allClosed = groups.length > 0 && groups.every(([s]) => closedGroups.includes(s));
     const tabError = this.tab === "mine" ? null : data.errors[this.tab];
-    const summary = data.mine ? L.summarize(data.mine.map((r) => L.toIssue(r, board)), board) : "";
+    const summary = data.mine ? L.summarize(data.mine.map((r) => L.toIssue(r, board)), board, lang) : "";
 
     const button = (id, label, onPress, opts = {}) =>
       div().id(id).flex_none().px(6).py(1).rounded(5).cursor_pointer()
@@ -266,6 +295,8 @@ export default class IssueLauncher extends View {
     const title = h_flex().h(30).px(10).flex_none().items_center().justify_between().bg(t.chrome).border_b(1).border_color(t.border)
       .child(div().font_semibold().text_color(t.foreground).child(provider ? `${L.PROVIDERS[provider].name} issues` : "Issues"))
       .child(h_flex().gap(2)
+        // Interface language: shows the other one; every copy follows the shared choice.
+        .child(icon("lang", say("switchLabel"), () => setShared(LANG_KEY, lang === "en" ? "zh-TW" : "en")))
         // Docked: pop out into the floating window.
         .when(!overlay, (el) => el.child(icon("pop-out", "⧉", () => { runAll(L.popOutCommands()); openOverlay(L.WINDOW); })))
         // Floating: dock back when this layout has the Issues panel, and close.
@@ -274,19 +305,19 @@ export default class IssueLauncher extends View {
 
     const header = v_flex().gap(4).flex_none()
       .child(h_flex().gap(6).items_center()
-        .child(div().text_color(t.dim).child(data.fetchedAt ? `更新於 ${data.fetchedAt}` : this.notGit ? "" : "讀取中…"))
-        .child(button("refresh", this.loading ? "讀取中…" : "重新整理", (cx) => { if (!this.loading) this.refresh(cx, true); }))
-        .when(groups.length > 0, (el) => el.child(button("toggle-all", allClosed ? "全部展開" : "全部收合",
+        .child(div().text_color(t.dim).child(data.fetchedAt ? say("updatedAt", { time: data.fetchedAt }) : this.notGit ? "" : say("loading")))
+        .child(button("refresh", this.loading ? say("loading") : say("refresh"), (cx) => { if (!this.loading) this.refresh(cx, true); }))
+        .when(groups.length > 0, (el) => el.child(button("toggle-all", allClosed ? say("expandAll") : say("collapseAll"),
           (cx) => this.setCollapsed((allClosed ? L.expandShown : L.collapseShown)(closedGroups, groups.map(([s]) => s)), cx)))))
       .when(Boolean(summary), (el) => el.child(div().text_color(t.muted).truncate().child(summary)))
       .child(h_flex().gap(4).children(TABS.map(([id, label]) =>
-        button(`tab-${id}`, `${label}（${lists[id] ? lists[id].length : "…"}）`, (cx) => this.setTab(id, cx), { on: this.tab === id, dim: this.tab !== id }))));
+        button(`tab-${id}`, counted(lang, say(label), lists[id] ? lists[id].length : "…"), (cx) => this.setTab(id, cx), { on: this.tab === id, dim: this.tab !== id }))));
 
     const messages = [];
-    if (this.notGit) messages.push(div().text_color(t.muted).child("目前的 space 不在 git repo 裡。"));
-    if (data.error) messages.push(div().text_color(t.ansi1).child(`${cli} 失敗：${data.error}`));
-    if (tabError) messages.push(div().text_color(t.ansi1).child(`${cli} 失敗：${tabError}`));
-    if (lists[this.tab] && shown.length === 0 && !tabError) messages.push(div().text_color(t.dim).child(EMPTY_TEXT[this.tab]));
+    if (this.notGit) messages.push(div().text_color(t.muted).child(say("notGit")));
+    if (data.error) messages.push(div().text_color(t.ansi1).child(say("cliFailed", { cli, reason: reason(data.error) })));
+    if (tabError) messages.push(div().text_color(t.ansi1).child(say("cliFailed", { cli, reason: reason(tabError) })));
+    if (lists[this.tab] && shown.length === 0 && !tabError) messages.push(div().text_color(t.dim).child(say(TABS.find(([id]) => id === this.tab)[2])));
 
     const row = (i) => v_flex()
       .child(h_flex().gap(6).items_center().min_w(0)
@@ -308,7 +339,7 @@ export default class IssueLauncher extends View {
           .on_click((_e, cx) => this.setCollapsed(L.toggle(closedGroups, status), cx))
           .child(div().w(12).text_color(t.muted).child(folded ? "▸" : "▾"))
           .child(div().font_semibold().text_color(status === board.done ? t.dim : board.colors[status] ?? t.foreground)
-            .child(`${status}（${list.length}）`)))
+            .child(counted(lang, L.groupName(status, lang), list.length))))
         .when(!folded, (el) => el.children(list.map(row)));
     };
 
