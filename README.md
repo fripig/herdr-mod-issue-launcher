@@ -48,6 +48,8 @@ herdr-app do layout.switch --name issue-launcher   # 或 cmd-shift-l 切換
 
 `install.sh` 把 `mods/issue-launcher/` 的檔案複製到 `~/.config/herdr-app/mods/issue-launcher/`，並在 `.installed-from` 記下來源；資料夾不是它裝的就拒絕覆蓋。它也會把 `layouts/issue-launcher.json` 複製到 `~/.config/herdr-app/layouts/`（不是它裝的同名 layout 就拒絕覆蓋），但不會幫你切換 layout。
 
+若你在安裝後直接改了 `~/.config/herdr-app/layouts/issue-launcher.json`，再跑 `install.sh` 會拒絕覆蓋並提示：把修改搬回 repo 的 `layouts/issue-launcher.json`，或用 `scripts/install.sh --force` 強制覆蓋（改過的檔案會留成 `issue-launcher.json.bak-<時間>`）。用滑鼠調整的面板寬度、開關等狀態存在 `layouts/.state/`，不受影響。
+
 ### issue-launcher layout
 
 切到 `issue-launcher` layout 後，分頁列右側 Files、Changes 旁多一個 **Issues** 按鈕：點了右側面板顯示 issue 清單，再點收起，和 Files／Changes 共用同一個面板；切換 space 時會記住各 space 最後開的面板（mod 會把 `issues` 加進共用設定 `workspace.panels`）。
