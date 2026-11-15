@@ -67,7 +67,6 @@ Status colors come from the board (see below). Default palette in order: `#4ade8
   - ⧉ hides the right panel and opens the window with `openOverlay`, not `mod.open`, because `mod.open` toggles and would close an open window.
   - ⇲ selects Issues, shows the panel, and closes the window.
 - **Nothing animates.** Timers only fetch data.
-
 - **Languages:** English and Traditional Chinese, from `i18n.js`.
   - At start each copy asks the system once: `defaults read -g AppleLanguages` on macOS (first entry), `LANG` elsewhere. `zh…` gives Chinese; anything else, or a failed check, gives English.
   - The title row has a chip naming the other language (EN or 中). It sets Herdr's shared value `issue-launcher.lang`, which every copy follows, and which overrides the detected language.
